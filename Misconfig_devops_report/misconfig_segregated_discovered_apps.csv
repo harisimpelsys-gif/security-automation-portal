@@ -1,0 +1,52 @@
+raw_or_canonical,count
+PMPConsumerProd,5615
+PMPConsumerDev,5451
+AWS ShopCPR Dev,5288
+AWS Odin Dev,5190
+AWS Network,5025
+Network,5025
+AWS ShopCPR Atlas Prod,4095
+PMPConsumerTest,4011
+AWS Atlas Dev,3001
+AWS Odin Prod,2641
+AWS CECME Dev,2302
+AWS Heart Bangalore Shared,1988
+AWS Athena Dev,1932
+AWS CECME Prod,1814
+AWS eLearning Dev,1686
+AWS Data Hub Dev,1344
+AWS eLearning Prod,1263
+AWS Athena Prod,1129
+AWS CarePlans Dev,1123
+AWS FLP INST Dev,974
+AWS FLP CNTRL Dev,922
+AWS Patient Portal Dev,898
+AWS Data Hub Prod,816
+AWS GoldenAMI Prod,807
+AWS AHA Master2,795
+AWS AHA Master,795
+PMPDataLakeDev,771
+AWS CarePlans Prod,722
+AWS WHO Dev,687
+PMPDevOps,594
+PMPDataLakeTest,528
+AWS AUI Dev,528
+AWS FLP JHU Prod,520
+PMPDataLakeProd,513
+AWS AUI Prod,483
+AWS WHO Prod,446
+AWS HBChatBot Dev,387
+AWS FLP CNTRL Prod,380
+AWS Heart Bangalore Security Operations,372
+SharedServices,365
+SharedServicesDev,354
+SharedServicesQa,317
+IdentityCenter,306
+AWS IdentityCenter,306
+AWS LogArchive,291
+LogArchive,291
+AWS Audit,285
+Audit,285
+AWS Atlas Prod,281
+FLP - NonProd,198
+DevTest - MSDN Pricing,122
