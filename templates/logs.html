@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Logs - Security Automation Portal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body { background:#030312; color:#E6EEF6; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; padding: 18px; }
+    .card { background: rgba(10,12,20,0.85); border: 1px solid rgba(140,160,180,0.08); }
+    pre { white-space: pre-wrap; word-break: break-word; max-height: 65vh; overflow:auto; background: #020617; border-radius:8px; padding:12px; color:#e6eef6; }
+    .meta { color:#9aa7b8; font-size:0.9rem; }
+    .btn-ghost { background:transparent; border:1px solid rgba(148,163,184,0.12); color:#cfe7ff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="mb-3">Logs</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if view is not defined %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card p-3">
+            <h5>Error Logs</h5>
+            <p class="meta">File: <strong>error.log</strong> — {% if error_meta.exists %}Size: {{ error_meta.size }} bytes — Modified: {{ error_meta.mtime }}{% else %}Not present{% endif %}</p>
+            <div class="d-flex gap-2">
+              <a class="btn btn-outline-danger" href="{{ url_for('logs_error') }}">View Error Logs</a>
+              <form method="post" action="{{ url_for('logs_error') }}">
+                <input type="hidden" name="action" value="clear" />
+                <button class="btn btn-ghost" type="submit">Clear Error Log</button>
+              </form>
+              <a class="btn btn-secondary" href="{{ url_for('logs_download', which='error') }}">Download</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card p-3">
+            <h5>Processed Logs</h5>
+            <p class="meta">File: <strong>processed.log</strong> — {% if processed_meta.exists %}Size: {{ processed_meta.size }} bytes — Modified: {{ processed_meta.mtime }}{% else %}Not present{% endif %}</p>
+            <div class="d-flex gap-2">
+              <a class="btn btn-outline-success" href="{{ url_for('logs_processed') }}">View Processed Logs</a>
+              <form method="post" action="{{ url_for('logs_processed') }}">
+                <input type="hidden" name="action" value="clear" />
+                <button class="btn btn-ghost" type="submit">Clear Processed Log</button>
+              </form>
+              <a class="btn btn-secondary" href="{{ url_for('logs_download', which='processed') }}">Download</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="card mt-3 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5>
+            {% if view == 'error' %}Error Log{% else %}Processed Log{% endif %}
+          </h5>
+          <div class="d-flex gap-2">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('logs_index') }}">Back</a>
+            <form method="post" style="display:inline;">
+              <input type="hidden" name="action" value="clear" />
+              <button class="btn btn-danger btn-sm" type="submit">Clear</button>
+            </form>
+            <a class="btn btn-outline-light btn-sm" href="{{ url_for('logs_download', which=view) }}">Download</a>
+          </div>
+        </div>
+
+        <pre>{{ content or '(no log content)' }}</pre>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
