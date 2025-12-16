@@ -1,0 +1,235 @@
+====================================================================================================
+TIMESTAMP: 2025-12-12 04:01:23 UTC
+UPLOAD: CONFIDENTIAL_VMP_HB_20251201.xlsx
+--------------------------------------------------------------------------------
+Saved to: C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251201.xlsx
+Uploaded by session
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 04:01:53 UTC
+SCRIPT: split_vulns.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251201.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+Wrote workbook: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 04:10:41 UTC
+UPLOAD: CONFIDENTIAL_VMP_HB_20251201.xlsx
+--------------------------------------------------------------------------------
+Saved to: C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251201.xlsx
+Uploaded by session
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 04:11:10 UTC
+SCRIPT: split_vulns.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251201.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+Wrote workbook: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 05:23:18 UTC
+UPLOAD: CONFIDENTIAL_VMP_HB_20251208.xlsx
+--------------------------------------------------------------------------------
+Saved to: C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251208.xlsx
+Uploaded by session
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 05:23:57 UTC
+SCRIPT: split_vulns.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251208.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+Wrote workbook: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 05:27:20 UTC
+SCRIPT: split_vulns.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251208.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+Wrote workbook: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 07:08:25 UTC
+UPLOAD: CONFIDENTIAL_VMP_HB_20251208.xlsx
+--------------------------------------------------------------------------------
+Saved to: C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251208.xlsx
+Uploaded by session
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-12 07:09:10 UTC
+SCRIPT: split_vulns.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251208.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+Wrote workbook: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:00:24 UTC
+UPLOAD: CONFIDENTIAL_VMP_HB_20251215.xlsx
+--------------------------------------------------------------------------------
+Saved to: C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251215.xlsx
+Uploaded by session
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:00:59 UTC
+SCRIPT: split_vulns.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251215.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+Wrote workbook: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report\vulnerabilities_by_application.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:01:18 UTC
+SCRIPT: automated_master_report.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_master_report\Master_Report_Automated.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\Vul_Automation\automated_master_report.py --input C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251215.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Vulnarability_master_report\Master_Report_Automated.xlsx
+
+Wrote: C:\Users\mohammedharis.f\Desktop\website\Vulnarability_master_report\Master_Report_Automated.xlsx
+
+Preview (first 20 rows):
+
+                       Application Name Total number of Active Instances Total number of Active Vulnerabilities Terminated entry Total number of Critical - Actively Exploited Total number of Critical Total number of High Total number of Medium Total number of Low Total Vulnerability Severity (High+Critical+Critical-AE+Low+Medium) Total number of Unique IPs
+                         AWS Athena Dev                                6                                     11                                                              0                        0                   11                      0                   0                                                                  11                          6
+                          AWS Atlas Dev                               20                                     55                                                              0                        0                   55                      0                   0                                                                  55                         20
+                      AWS CarePlans Dev                               10                                     20                                                              0                        0                   20                      0                   0                                                                  20                         10
+                          AWS CECME Dev                               15                                     32                                                              0                        0                   32                      0                   0                                                                  32                         15
+                       AWS Data Hub Dev                               22                                     43                                                              0                        0                   43                      0                   0                                                                  43                         22
+                      AWS eLearning Dev                               26                                     41                                                              0                        0                   41                      0                   0                                                                  41                         26
+AWS Heart Bangalore Security Operations                                2                                      3                                                              0                        1                    2                      0                   0                                                                   3                          2
+                           AWS Odin Dev                               27                                    320                                                              0                       46                  274                      0                   0                                                                 320                         27
+             AWS Heart Bangalore Shared                               11                                     35                                                              0                        1                   34                      0                   0                                                                  35                         11
+                        AWS ShopCPR Dev                               14                                     42                                                              0                        2                   40                      0                   0                                                                  42                         17
+                      AWS FLP CNTRL Dev                                5                                     73                                                              0                        6                   67                      0                   0                                                                  73                          5
+                       AWS FLP INST Dev                                6                                     68                                                              0                        6                   62                      0                   0                                                                  68                          6
+                         PMPConsumerDev                                8                                    321                                                              3                       22                  296                      0                   0                                                                 321                          8
+                            AWS WHO Dev                                6                                     12                                                              0                        0                   12                      0                   0                                                                  12                          6
+                        PMPConsumerTest                               32                                   1000                                                             19                      125                  856                      0                   0                                                                1000                         32
+                     AWS CarePlans Prod                                6                                     67                                                              0                       10                   57                      0                   0                                                                  67                          6
+                        AWS Athena Prod                                1                                      2                                                              0                        0                    2                      0                   0                                                                   2                          1
+                         AWS CECME Prod                               13                                    204                                                              0                       20                  184                      0                   0                                                                 204                         13
+                      AWS Data Hub Prod                                6                                     12                                                              0                        0                   12                      0                   0                                                                  12                          6
+                     AWS eLearning Prod                               22                                     41                                                              0                        0                   41                      0                   0                                                                  41                         22
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:03:53 UTC
+SCRIPT: segregate_misconfigs.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Misconfig_devops_report\misconfig_segregated.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\segregate_misconfigs.py C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251215.xlsx C:\Users\mohammedharis.f\Desktop\website\Misconfig_devops_report\misconfig_segregated.xlsx
+
+Using application column: Application Name
+Done. Output: C:\Users\mohammedharis.f\Desktop\website\Misconfig_devops_report\misconfig_segregated.xlsx
+Discovered apps list: C:\Users\mohammedharis.f\Desktop\website\Misconfig_devops_report\misconfig_segregated_discovered_apps.csv
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:04:44 UTC
+SCRIPT: Misconfigp2.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report\Misconfig_AHA_PMP_AZURE_PP.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\Misconfigp2.py --input C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251215.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report\Misconfig_AHA_PMP_AZURE_PP.xlsx
+
+Processing sheet: Misconfigurations  rows: 76271
+Pre-severity counts per group (exact app column matches):
+  AHA: 43015
+  PMP: 31999
+  AZURE: 349
+  PP: 908
+Rows after severity filter: 3988
+Post-severity counts per group (exact app column matches):
+  AHA: 1090
+  PMP: 2832
+  AZURE: 12
+  PP: 54
+WROTE: C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report\Misconfig_AHA_PMP_AZURE_PP.xlsx
+DEBUG CSV: C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report\Misconfig_AHA_PMP_AZURE_PP_debug.csv
+{'outfile': 'C:\\Users\\mohammedharis.f\\Desktop\\website\\Misconfig_AHA_PMP_AZURE_PP_report\\Misconfig_AHA_PMP_AZURE_PP.xlsx', 'debug_csv': 'C:\\Users\\mohammedharis.f\\Desktop\\website\\Misconfig_AHA_PMP_AZURE_PP_report\\Misconfig_AHA_PMP_AZURE_PP_debug.csv', 'pre_counts': {'AHA': 43015, 'PMP': 31999, 'AZURE': 349, 'PP': 908}, 'post_counts': {'AHA': 1090, 'PMP': 2832, 'AZURE': 12, 'PP': 54}, 'outputs': {'AHA': 1090, 'PMP': 2832, 'AZURE': 12, 'PP': 54}, 'unmatched': 0}
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:05:05 UTC
+SCRIPT: classify_misconfigs.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\classify_misconfigs.py --report C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report\Misconfig_AHA_PMP_AZURE_PP.xlsx --rules-folder C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules --output C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx
+
+Using rule files:
+  - C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules\Actionable_report.xlsx
+  - C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules\Exception_Report.xlsx
+  - C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules\POC_Report.xlsx
+  - C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules\Region_Disabled_Report.xlsx
+  - C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules\Cross_Exception_Report.xlsx
+  - C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules\No_Access_to_Change_Report.xlsx
+
+....Data Analysing...
+#################################################################################
+
+...checking the rules..
+#################################################################################
+
+...Optimization in place...
+#################################################################################
+
+Loading training rules...
+#################################################################################
+Loaded 376 labeled rules.
+rapidfuzz available: using fuzzy token matching
+[AHA] rows=1090  updated=1082
+[PMP] rows=2832  updated=572
+[AZURE] rows=12  updated=0
+[PP] rows=54  updated=0
+[Unmatched] rows=0  updated=0
+[Summary] rows=5  updated=0
+#################################################################################
+
+................. Almost Done..............
+
+Saved classified report to: C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx
+Saved debug matches to:    C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final_debug.csv
+
+...................Processed the Data with 100% Accuracy.......................
+#################################################################################
+
+ Process Completed please check the output file under : C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 06:05:16 UTC
+SCRIPT: automate_master_report.py — OUTPUT: C:\Users\mohammedharis.f\Desktop\website\Misconfig_master_report\Misconfig_Master_Report_Automated.xlsx
+--------------------------------------------------------------------------------
+COMMAND: python C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\automate_master_report.py --input C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx --output C:\Users\mohammedharis.f\Desktop\website\Misconfig_master_report\Misconfig_Master_Report_Automated.xlsx
+
+Master report generated at: C:\Users\mohammedharis.f\Desktop\website\Misconfig_master_report\Misconfig_Master_Report_Automated.xlsx
+
+
+
+====================================================================================================
+TIMESTAMP: 2025-12-16 10:14:43 UTC
+UPLOAD: CONFIDENTIAL_VMP_HB_20251208.xlsx
+--------------------------------------------------------------------------------
+Saved to: C:\Users\mohammedharis.f\Desktop\website\uploads\CONFIDENTIAL_VMP_HB_20251208.xlsx
+Uploaded by session
+
+
