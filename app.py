@@ -1,67 +1,66 @@
 #!/usr/bin/env python3
 import os
 import subprocess
-import datetime
-from pathlib import Path
+from datetime import datetime
 from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    send_file,
-    abort,
-    session
+    Flask, render_template, request,
+    redirect, url_for, flash,
+    send_file, abort
 )
 
-# -------------------------------------------------
+# -----------------------------
 # App setup
-# -------------------------------------------------
+# -----------------------------
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-UPLOAD_DIR = BASE_DIR / "uploads"
-LOG_DIR = BASE_DIR / "logs"
-OUT_DIR = BASE_DIR / "outputs"
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+LOG_DIR = os.path.join(BASE_DIR, "logs")
 
-VULN_DIR = OUT_DIR / "vuln"
-MIS_DIR = OUT_DIR / "misconfig"
+VULN_DIR = os.path.join(BASE_DIR, "Vul_Automation")
+MISCONF_DIR = os.path.join(BASE_DIR, "MisConfig_Automation")
 
-UPLOAD_DIR.mkdir(exist_ok=True)
-LOG_DIR.mkdir(exist_ok=True)
-VULN_DIR.mkdir(parents=True, exist_ok=True)
-MIS_DIR.mkdir(parents=True, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 
-PROCESSED_LOG = LOG_DIR / "processed.log"
-ERROR_LOG = LOG_DIR / "error.log"
+ERROR_LOG = os.path.join(LOG_DIR, "error.log")
+PROC_LOG = os.path.join(LOG_DIR, "processed.log")
 
-# -------------------------------------------------
+# -----------------------------
 # Logging helpers
-# -------------------------------------------------
-def log_processed(msg):
-    with open(PROCESSED_LOG, "a", encoding="utf-8") as f:
-        f.write(f"[{datetime.datetime.now()}] {msg}\n")
+# -----------------------------
+def log_info(msg):
+    with open(PROC_LOG, "a") as f:
+        f.write(f"[{datetime.now()}] INFO: {msg}\n")
 
 def log_error(msg):
-    with open(ERROR_LOG, "a", encoding="utf-8") as f:
-        f.write(f"[{datetime.datetime.now()}] {msg}\n")
+    with open(ERROR_LOG, "a") as f:
+        f.write(f"[{datetime.now()}] ERROR: {msg}\n")
 
-# -------------------------------------------------
-# Main Page
-# -------------------------------------------------
+def latest_upload():
+    files = [
+        os.path.join(UPLOAD_DIR, f)
+        for f in os.listdir(UPLOAD_DIR)
+        if os.path.isfile(os.path.join(UPLOAD_DIR, f))
+    ]
+    return max(files, key=os.path.getmtime) if files else None
+
+# -----------------------------
+# Main page
+# -----------------------------
 @app.route("/")
 def index():
     return render_template(
         "index.html",
+        report_path=latest_upload(),
         last_output=None
     )
 
-# -------------------------------------------------
+# -----------------------------
 # Upload
-# -------------------------------------------------
+# -----------------------------
 @app.route("/upload", methods=["POST"])
 def upload():
     f = request.files.get("report_file")
@@ -69,200 +68,133 @@ def upload():
         flash("No file uploaded", "danger")
         return redirect(url_for("index"))
 
-    path = UPLOAD_DIR / f.filename
+    path = os.path.join(UPLOAD_DIR, f.filename)
     f.save(path)
 
-    session["uploaded_report"] = str(path)
-
-    log_processed(f"Uploaded file: {path}")
+    log_info(f"Uploaded file: {path}")
     flash(f"Uploaded {f.filename}", "success")
     return redirect(url_for("index"))
 
-# =================================================
-# VULNERABILITY PIPELINE
-# =================================================
+# -----------------------------
+# Vulnerability – DevOps
+# -----------------------------
 @app.route("/run/vuln/devops", methods=["POST"])
 def run_vuln_devops():
-    report = session.get("uploaded_report")
-    if not report or not Path(report).exists():
-        flash("Upload a file first", "danger")
+    report = latest_upload()
+    if not report:
+        flash("Upload a report first", "danger")
         return redirect(url_for("index"))
 
-    output = VULN_DIR / "Vuln_DevOps_Output.xlsx"
-
-    cmd = [
-        "python",
-        str(BASE_DIR / "Vul_Automation" / "split_vulns.py"),
-        "--input", report,
-        "--output", str(output)
-    ]
-
-    log_processed(f"Running Vuln DevOps: {' '.join(cmd)}")
+    script = os.path.join(VULN_DIR, "split_vulns.py")
 
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        log_processed(res.stdout)
-        flash("Vulnerability DevOps completed", "success")
+        log_info("Starting Vulnerability DevOps segregation")
+        subprocess.run(
+            ["python", script, report],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        log_info("Vulnerability DevOps completed successfully")
+        flash("Vulnerability DevOps run completed", "success")
     except subprocess.CalledProcessError as e:
         log_error(e.stderr)
         flash("Vulnerability DevOps failed", "danger")
 
     return redirect(url_for("index"))
 
+# -----------------------------
+# Vulnerability – Master
+# -----------------------------
 @app.route("/run/vuln/master", methods=["POST"])
 def run_vuln_master():
-    devops_out = VULN_DIR / "Vuln_DevOps_Output.xlsx"
-    if not devops_out.exists():
-        flash("Run DevOps first", "warning")
+    report = latest_upload()
+    if not report:
+        flash("Upload a report first", "danger")
         return redirect(url_for("index"))
 
-    master_out = VULN_DIR / "Vuln_Master_Report.xlsx"
-
-    cmd = [
-        "python",
-        str(BASE_DIR / "Vul_Automation" / "automated_master_report.py"),
-        "--input", str(devops_out),
-        "--output", str(master_out)
-    ]
-
-    log_processed(f"Running Vuln Master: {' '.join(cmd)}")
+    script = os.path.join(VULN_DIR, "automate_master_report.py")
 
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        flash("Vulnerability Master generated", "success")
+        log_info("Starting Vulnerability Master Report")
+        subprocess.run(
+            ["python", script, report],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        log_info("Vulnerability Master Report completed")
+        flash("Vulnerability master report generated", "success")
     except subprocess.CalledProcessError as e:
         log_error(e.stderr)
-        flash("Vulnerability Master failed", "danger")
+        flash("Vulnerability master failed", "danger")
 
     return redirect(url_for("index"))
 
-# =================================================
-# MISCONFIGURATION PIPELINE
-# =================================================
+# -----------------------------
+# Misconfiguration – DevOps
+# -----------------------------
 @app.route("/run/misconfig/devops", methods=["POST"])
 def run_misconfig_devops():
-    report = session.get("uploaded_report")
-    if not report or not Path(report).exists():
-        flash("Upload a file first", "danger")
+    report = latest_upload()
+    if not report:
+        flash("Upload a report first", "danger")
         return redirect(url_for("index"))
 
-    stage1 = MIS_DIR / "misconfig_stage1.xlsx"
-
-    cmd = [
-        "python",
-        str(BASE_DIR / "MisConfig_Automation" / "segregate_misconfigs.py"),
-        report,
-        str(stage1)
-    ]
-
-    log_processed(f"Running Misconfig DevOps: {' '.join(cmd)}")
+    script = os.path.join(MISCONF_DIR, "devops_split.py")
 
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        flash("Misconfig DevOps completed", "success")
+        log_info("Starting Misconfiguration DevOps")
+        subprocess.run(
+            ["python", script, report],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        log_info("Misconfiguration DevOps completed")
+        flash("Misconfiguration DevOps completed", "success")
     except subprocess.CalledProcessError as e:
         log_error(e.stderr)
-        flash("Misconfig DevOps failed", "danger")
+        flash("Misconfiguration DevOps failed", "danger")
 
     return redirect(url_for("index"))
 
-@app.route("/run/misconfig/aha", methods=["POST"])
-def run_misconfig_aha():
-    stage1 = MIS_DIR / "misconfig_stage1.xlsx"
-    stage2 = MIS_DIR / "misconfig_stage2.xlsx"
-
-    cmd = [
-        "python",
-        str(BASE_DIR / "MisConfig_Automation" / "Misconfigp2.py"),
-        str(stage1),
-        str(stage2)
-    ]
-
-    log_processed(f"Running Misconfig Split: {' '.join(cmd)}")
-
-    try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        flash("Misconfig split completed", "success")
-    except subprocess.CalledProcessError as e:
-        log_error(e.stderr)
-        flash("Misconfig split failed", "danger")
-
-    return redirect(url_for("index"))
-
-@app.route("/run/misconfig/final", methods=["POST"])
-def run_misconfig_final():
-    stage2 = MIS_DIR / "misconfig_stage2.xlsx"
-    stage3 = MIS_DIR / "misconfig_rules.xlsx"
-
-    cmd = [
-        "python",
-        str(BASE_DIR / "MisConfig_Automation" / "classify_misconfigs.py"),
-        str(stage2),
-        str(stage3)
-    ]
-
-    log_processed(f"Running Misconfig Rules: {' '.join(cmd)}")
-
-    try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        flash("Misconfig rules applied", "success")
-    except subprocess.CalledProcessError as e:
-        log_error(e.stderr)
-        flash("Misconfig rules failed", "danger")
-
-    return redirect(url_for("index"))
-
-@app.route("/run/misconfig/master", methods=["POST"])
-def run_misconfig_master():
-    stage3 = MIS_DIR / "misconfig_rules.xlsx"
-    master = MIS_DIR / "Misconfig_Master_Report.xlsx"
-
-    cmd = [
-        "python",
-        str(BASE_DIR / "MisConfig_Automation" / "automate_master_report.py"),
-        str(stage3),
-        str(master)
-    ]
-
-    log_processed(f"Running Misconfig Master: {' '.join(cmd)}")
-
-    try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        flash("Misconfig Master generated", "success")
-    except subprocess.CalledProcessError as e:
-        log_error(e.stderr)
-        flash("Misconfig Master failed", "danger")
-
-    return redirect(url_for("index"))
-
-# =================================================
-# LOGS
-# =================================================
-def get_log_path(which):
-    if which == "error":
-        return ERROR_LOG
-    if which == "processed":
-        return PROCESSED_LOG
-    return None
-
+# -----------------------------
+# Logs
+# -----------------------------
 @app.route("/logs")
 def logs_index():
-    return render_template("logs.html")
+    def meta(path):
+        if not os.path.exists(path):
+            return {"exists": False}
+        st = os.stat(path)
+        return {
+            "exists": True,
+            "size": st.st_size,
+            "mtime": datetime.fromtimestamp(st.st_mtime)
+        }
+
+    return render_template(
+        "logs.html",
+        error_meta=meta(ERROR_LOG),
+        processed_meta=meta(PROC_LOG)
+    )
 
 @app.route("/logs/<which>")
 def logs_view(which):
-    path = get_log_path(which)
-    if not path or not path.exists():
+    path = ERROR_LOG if which == "error" else PROC_LOG
+    if not os.path.exists(path):
         abort(404)
-    return f"<pre>{path.read_text(errors='ignore')}</pre>"
+    with open(path, "r", errors="ignore") as f:
+        return f"<pre>{f.read()}</pre>"
 
 @app.route("/logs/download/<which>")
 def logs_download(which):
-    path = get_log_path(which)
-    if not path or not path.exists():
+    path = ERROR_LOG if which == "error" else PROC_LOG
+    if not os.path.exists(path):
         abort(404)
     return send_file(path, as_attachment=True)
 
-# -------------------------------------------------
+# -----------------------------
 if __name__ == "__main__":
     app.run(debug=True)
