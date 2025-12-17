@@ -1,128 +1,120 @@
 from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    session,
-    send_file,
+    Flask, render_template, request, redirect,
+    url_for, flash, session, send_file
 )
 import subprocess
 import os
-from werkzeug.utils import secure_filename
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
+from werkzeug.utils import secure_filename
 import threading
 
+# -----------------------------------------------------------------------------
+# FLASK APP INIT
+# -----------------------------------------------------------------------------
 app = Flask(__name__)
 app.secret_key = "change-this-key"
 
-# ========== FILE / PATH CONFIG ==========
 BASE_DIR = Path(__file__).resolve().parent
+
+# -----------------------------------------------------------------------------
+# DIRECTORIES (Render + Local Safe)
+# -----------------------------------------------------------------------------
 UPLOAD_FOLDER = BASE_DIR / "uploads"
+OUTPUT_FOLDER = BASE_DIR / "outputs"
 LOGS_FOLDER = BASE_DIR / "logs"
+SCRIPTS_VULN = BASE_DIR / "Vul_Automation"
+SCRIPTS_MISCONFIG = BASE_DIR / "MisConfig_Automation"
 
-UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
-LOGS_FOLDER.mkdir(parents=True, exist_ok=True)
+for p in [UPLOAD_FOLDER, OUTPUT_FOLDER, LOGS_FOLDER]:
+    p.mkdir(exist_ok=True)
 
-ALLOWED_EXTENSIONS = {"xlsx", "xls", "csv"}
-app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
-
-# log file paths
 ERROR_LOG = LOGS_FOLDER / "error.log"
 PROCESSED_LOG = LOGS_FOLDER / "processed.log"
 
-# small lock to avoid race conditions when appending logs
+ALLOWED_EXTENSIONS = {"xlsx", "xls", "csv"}
 _log_lock = threading.Lock()
 
-# ========== HELPERS ==========
+# -----------------------------------------------------------------------------
+# HELPERS
+# -----------------------------------------------------------------------------
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def now_ts() -> str:
+def now_ts():
     return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
 def append_log(path: Path, header: str, body: str):
-    """
-    Append an entry to a log file with a header & body.
-    """
-    entry = []
-    entry.append("=" * 100)
-    entry.append(f"TIMESTAMP: {now_ts()}")
-    entry.append(header)
-    entry.append("-" * 80)
-    entry.append(body or "")
-    entry.append("\n\n")
-    text = "\n".join(entry)
+    entry = (
+        "\n" + "=" * 100 +
+        f"\nTIMESTAMP: {now_ts()}\n{header}\n" +
+        "-" * 80 + f"\n{body}\n"
+    )
     with _log_lock:
-        with path.open("a", encoding="utf-8") as fh:
-            fh.write(text)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(entry)
 
-def tail_file(path: Path, max_chars: int = 20000):
-    """
-    Read tail of file (last max_chars characters).
-    """
+def tail_file(path: Path, max_chars=20000):
     if not path.exists():
         return ""
-    # read last chunk from file
-    with path.open("rb") as fh:
-        try:
-            fh.seek(0, os.SEEK_END)
-            size = fh.tell()
-            start = max(0, size - max_chars)
-            fh.seek(start)
-            data = fh.read().decode("utf-8", errors="replace")
-            # if cut mid-line, drop first partial line
-            if start > 0:
-                parts = data.splitlines(True)
-                if len(parts) > 1:
-                    data = "".join(parts[1:])
-        except Exception:
-            fh.seek(0)
-            data = fh.read().decode("utf-8", errors="replace")
-    return data
+    return path.read_text(encoding="utf-8", errors="replace")[-max_chars:]
 
-# ========== COMMAND RUNNER ==========
-def run_command(cmd, cwd=None):
-    """
-    Run a subprocess command (list). Returns (ok:bool, output_str).
-    """
+# -----------------------------------------------------------------------------
+# COMMAND EXECUTOR
+# -----------------------------------------------------------------------------
+def run_command(cmd):
     try:
         result = subprocess.run(
-            cmd,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            shell=False,
+            cmd, capture_output=True, text=True, shell=False
         )
         stdout = result.stdout or ""
         stderr = result.stderr or ""
         if result.returncode == 0:
             return True, stdout
         else:
-            out = f"RETURN CODE: {result.returncode}\n\nSTDERR:\n{stderr}\n\nSTDOUT:\n{stdout}"
-            return False, out
+            return False, (
+                f"RETURN CODE: {result.returncode}\n\n"
+                f"STDERR:\n{stderr}\n\nSTDOUT:\n{stdout}"
+            )
     except Exception as e:
-        return False, f"Exception while running command:\n{e}"
+        return False, f"Exception occurred:\n{e}"
 
-# ========== ROUTES ==========
-@app.route("/", methods=["GET"])
+def execute_and_log(cmd, script_name, output_path=None):
+    ok, output = run_command(cmd)
+
+    header = f"SCRIPT RUN: {script_name}"
+    if output_path:
+        header += f" — OUTPUT: {output_path}"
+
+    body = f"COMMAND: {' '.join(map(str, cmd))}\n\n{output}"
+
+    if ok:
+        append_log(PROCESSED_LOG, header, body)
+        session["last_status"] = "success"
+    else:
+        append_log(ERROR_LOG, header, body)
+        session["last_status"] = "error"
+
+    session["last_output"] = output
+    return ok
+
+# -----------------------------------------------------------------------------
+# ROUTES
+# -----------------------------------------------------------------------------
+@app.route("/")
 def index():
-    report_path = session.get("uploaded_report")
-    last_output = session.get("last_output")
-    last_status = session.get("last_status")
     return render_template(
         "index.html",
-        report_path=report_path,
-        last_output=last_output,
-        last_status=last_status,
+        report_path=session.get("uploaded_report"),
+        last_output=session.get("last_output"),
+        last_status=session.get("last_status"),
     )
 
+# ---------------------------- FILE UPLOAD ------------------------------------
 @app.route("/upload", methods=["POST"])
 def upload():
     if "report_file" not in request.files:
-        flash("No file part in request.", "danger")
+        flash("No file part.", "danger")
         return redirect(url_for("index"))
 
     file = request.files["report_file"]
@@ -134,274 +126,191 @@ def upload():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         save_path = UPLOAD_FOLDER / filename
-        file.save(str(save_path))
+        file.save(save_path)
 
         session["uploaded_report"] = str(save_path)
         session["last_output"] = None
         session["last_status"] = None
 
-        # log processed upload
-        header = f"UPLOAD: {filename}"
-        body = f"Saved to: {save_path}\nUploaded by session"
-        append_log(PROCESSED_LOG, header, body)
+        append_log(PROCESSED_LOG, "FILE UPLOAD", f"Uploaded: {save_path}")
 
-        flash(f"Report uploaded: {filename}", "success")
-        return redirect(url_for("index"))
-    else:
-        flash("File type not allowed. Upload .xlsx, .xls or .csv", "danger")
+        flash(f"File uploaded: {filename}", "success")
         return redirect(url_for("index"))
 
-# ---------- helper for wrapping script runs and logging -----------
-def execute_and_log(script_cmd: list, script_name: str, saved_output_path: str = None):
-    """
-    Run command, append to processed or error logs, and update session last_output/status.
-    Returns (ok, output_str).
-    """
-    ok, output = run_command(script_cmd)
-    header = f"SCRIPT: {script_name}"
-    if saved_output_path:
-        header += f" — OUTPUT: {saved_output_path}"
-    # include the command list for traceability
-    body = f"COMMAND: {' '.join(map(str, script_cmd))}\n\n{output}"
-    if ok:
-        append_log(PROCESSED_LOG, header, body)
-        session["last_output"] = output
-        session["last_status"] = "success"
-        return True, output
-    else:
-        append_log(ERROR_LOG, header, body)
-        session["last_output"] = output
-        session["last_status"] = "error"
-        return False, output
+    flash("Invalid file type.", "danger")
+    return redirect(url_for("index"))
 
-# ========== Existing routes (Vulnerability + Misconfig) ==========
-# NOTE: keep your original script paths — they can be adjusted later to be relative.
-# I kept your previous behavior but call execute_and_log to persist logs.
-
+# -----------------------------------------------------------------------------
+# VULNERABILITY – DEVOPS
+# -----------------------------------------------------------------------------
 @app.route("/run/vuln/devops", methods=["POST"])
 def run_vuln_devops():
-    report_path = session.get("uploaded_report")
-    if not report_path:
+    report = session.get("uploaded_report")
+    if not report:
         flash("Upload a report first.", "danger")
         return redirect(url_for("index"))
 
-    script_path = r"C:\Users\mohammedharis.f\Downloads\Vul_Automation\split_vulns.py"
-    output_dir = Path(r"C:\Users\mohammedharis.f\Desktop\website\Vulnarability_devops_report")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = OUTPUT_FOLDER / "vulnerability_devops"
+    output_dir.mkdir(exist_ok=True)
     output_path = output_dir / "vulnerabilities_by_application.xlsx"
 
-    cmd = ["python", script_path, report_path, "--output", str(output_path)]
+    script = SCRIPTS_VULN / "split_vulns.py"
 
-    ok, output = execute_and_log(cmd, "split_vulns.py", str(output_path))
+    cmd = ["python", str(script), report, "--output", str(output_path)]
+    ok = execute_and_log(cmd, "split_vulns.py", str(output_path))
 
-    if ok:
-        flash(f"Vulnerability DevOps report executed successfully. Saved to: {output_path}", "success")
-    else:
-        flash("Vulnerability DevOps report failed. Check Logs -> Error Logs for details.", "danger")
-
+    flash(
+        ("Vulnerability DevOps done!" if ok else "Error — check logs."),
+        "success" if ok else "danger",
+    )
     return redirect(url_for("index"))
 
+# -----------------------------------------------------------------------------
+# VULNERABILITY – MASTER REPORT
+# -----------------------------------------------------------------------------
 @app.route("/run/vuln/master", methods=["POST"])
 def run_vuln_master():
-    report_path = session.get("uploaded_report")
-    if not report_path:
-        flash("Upload a report first.", "danger")
+    report = session.get("uploaded_report")
+    if not report:
+        flash("Upload report first.", "danger")
         return redirect(url_for("index"))
 
-    script_path = r"C:\Users\mohammedharis.f\Downloads\Vul_Automation\automated_master_report.py"
-    output_dir = Path(r"C:\Users\mohammedharis.f\Desktop\website\Vulnarability_master_report")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = OUTPUT_FOLDER / "vulnerability_master"
+    output_dir.mkdir(exist_ok=True)
     output_path = output_dir / "Master_Report_Automated.xlsx"
 
-    cmd = ["python", script_path, "--input", report_path, "--output", str(output_path)]
+    script = SCRIPTS_VULN / "automated_master_report.py"
 
-    ok, output = execute_and_log(cmd, "automated_master_report.py", str(output_path))
+    cmd = ["python", str(script), "--input", report, "--output", str(output_path)]
+    ok = execute_and_log(cmd, "automated_master_report.py", str(output_path))
 
-    if ok:
-        flash(f"Master Vulnerability report executed successfully. Saved to: {output_path}", "success")
-    else:
-        flash("Master Vulnerability report failed. Check Logs -> Error Logs for details.", "danger")
-
+    flash(
+        ("Master report done!" if ok else "Error — check logs."),
+        "success" if ok else "danger",
+    )
     return redirect(url_for("index"))
 
+# -----------------------------------------------------------------------------
+# MISCONFIG – DEVOPS
+# -----------------------------------------------------------------------------
 @app.route("/run/misconfig/devops", methods=["POST"])
 def run_misconfig_devops():
-    report_path = session.get("uploaded_report")
-    if not report_path:
-        flash("Upload a report first.", "danger")
+    report = session.get("uploaded_report")
+    if not report:
+        flash("Upload report first.", "danger")
         return redirect(url_for("index"))
 
-    script_path = r"C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\segregate_misconfigs.py"
-    output_dir = Path(r"C:\Users\mohammedharis.f\Desktop\website\Misconfig_devops_report")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = OUTPUT_FOLDER / "misconfig_devops"
+    output_dir.mkdir(exist_ok=True)
     output_path = output_dir / "misconfig_segregated.xlsx"
 
-    cmd = ["python", script_path, str(report_path), str(output_path)]
+    script = SCRIPTS_MISCONFIG / "segregate_misconfigs.py"
 
-    ok, output = execute_and_log(cmd, "segregate_misconfigs.py", str(output_path))
+    cmd = ["python", str(script), report, str(output_path)]
+    ok = execute_and_log(cmd, "segregate_misconfigs.py", str(output_path))
 
-    if ok:
-        flash(f"Misconfiguration DevOps report executed successfully. Saved to: {output_path}", "success")
-    else:
-        flash("Misconfiguration DevOps report failed. Check Logs -> Error Logs for details.", "danger")
-
+    flash(
+        ("Misconfig DevOps done!" if ok else "Error — check logs."),
+        "success" if ok else "danger",
+    )
     return redirect(url_for("index"))
 
+# -----------------------------------------------------------------------------
+# MISCONFIG – AHA/PMP/AZURE/PP
+# -----------------------------------------------------------------------------
 @app.route("/run/misconfig/aha", methods=["POST"])
 def run_misconfig_aha():
-    report_path = session.get("uploaded_report")
-    if not report_path:
-        flash("Upload a report first.", "danger")
+    report = session.get("uploaded_report")
+    if not report:
+        flash("Upload report first.", "danger")
         return redirect(url_for("index"))
 
-    script_path = r"C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\Misconfigp2.py"
-    output_dir = Path(r"C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = OUTPUT_FOLDER / "misconfig_p2"
+    output_dir.mkdir(exist_ok=True)
     output_path = output_dir / "Misconfig_AHA_PMP_AZURE_PP.xlsx"
 
-    cmd = ["python", script_path, "--input", report_path, "--output", str(output_path)]
+    script = SCRIPTS_MISCONFIG / "Misconfigp2.py"
 
-    ok, output = execute_and_log(cmd, "Misconfigp2.py", str(output_path))
+    cmd = ["python", str(script), "--input", report, "--output", str(output_path)]
+    ok = execute_and_log(cmd, "Misconfigp2.py", str(output_path))
 
-    if ok:
-        flash(f"Misconfiguration AHA/PMP/AZURE/PP report executed successfully. Saved to: {output_path}", "success")
-    else:
-        flash("Misconfiguration AHA/PMP/AZURE/PP report failed. Check Logs -> Error Logs for details.", "danger")
-
+    flash(
+        ("AHA/PMP/AZURE/PP Done!" if ok else "Error — check logs."),
+        "success" if ok else "danger",
+    )
     return redirect(url_for("index"))
 
+# -----------------------------------------------------------------------------
+# MISCONFIG – FINAL
+# -----------------------------------------------------------------------------
 @app.route("/run/misconfig/final", methods=["POST"])
 def run_misconfig_final():
-    aha_output_path = Path(r"C:\Users\mohammedharis.f\Desktop\website\Misconfig_AHA_PMP_AZURE_PP_report\Misconfig_AHA_PMP_AZURE_PP.xlsx")
-
-    if not aha_output_path.exists():
-        session["last_output"] = f"Required input not found:\n{aha_output_path}\n\nRun 'Misconfiguration AHA / PMP / AZURE / PP Report' first."
-        session["last_status"] = "error"
-        flash("AHA/PMP/AZURE/PP report not found. Run that step before Final Misconfig.", "danger")
+    p2_file = OUTPUT_FOLDER / "misconfig_p2" / "Misconfig_AHA_PMP_AZURE_PP.xlsx"
+    if not p2_file.exists():
+        flash("Run AHA/PMP/AZURE/PP step first!", "danger")
         return redirect(url_for("index"))
 
-    script_path = r"C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\classify_misconfigs.py"
-    rules_folder = r"C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\rules"
+    output_dir = OUTPUT_FOLDER / "misconfig_final"
+    output_dir.mkdir(exist_ok=True)
+    output_path = output_dir / "Misconfig_Actionable_Final.xlsx"
 
-    output_dir = Path(r"C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx"
+    script = SCRIPTS_MISCONFIG / "classify_misconfigs.py"
+    rules_dir = SCRIPTS_MISCONFIG / "rules"
 
     cmd = [
         "python",
-        script_path,
-        "--report",
-        str(aha_output_path),
-        "--rules-folder",
-        rules_folder,
-        "--output",
-        str(output_path),
+        str(script),
+        "--report", str(p2_file),
+        "--rules-folder", str(rules_dir),
+        "--output", str(output_path),
     ]
 
-    ok, output = execute_and_log(cmd, "classify_misconfigs.py", str(output_path))
+    ok = execute_and_log(cmd, "classify_misconfigs.py", str(output_path))
 
-    if ok:
-        flash(f"Misconfiguration Final report executed successfully. Saved to: {output_path}", "success")
-    else:
-        flash("Misconfiguration Final report failed. Check Logs -> Error Logs for details.", "danger")
-
+    flash(
+        ("Final Misconfig done!" if ok else "Error — check logs."),
+        "success" if ok else "danger",
+    )
     return redirect(url_for("index"))
 
+# -----------------------------------------------------------------------------
+# MISCONFIG – MASTER
+# -----------------------------------------------------------------------------
 @app.route("/run/misconfig/master", methods=["POST"])
 def run_misconfig_master():
-    final_report_path = Path(r"C:\Users\mohammedharis.f\Desktop\website\Misconfig_final_report\Misconfig_AHA_PMP_AZURE_PP_actionable_final.xlsx")
-
-    if not final_report_path.exists():
-        session["last_output"] = f"Required input not found:\n{final_report_path}\n\nRun 'Misconfiguration Final Report' first."
-        session["last_status"] = "error"
-        flash("Final misconfiguration report not found. Run 'Misconfiguration Final Report' first.", "danger")
+    final_file = OUTPUT_FOLDER / "misconfig_final" / "Misconfig_Actionable_Final.xlsx"
+    if not final_file.exists():
+        flash("Run Final Misconfig first!", "danger")
         return redirect(url_for("index"))
 
-    script_path = r"C:\Users\mohammedharis.f\Downloads\MisConfig_Automation\automate_master_report.py"
-    output_dir = Path(r"C:\Users\mohammedharis.f\Desktop\website\Misconfig_master_report")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "Misconfig_Master_Report_Automated.xlsx"
+    output_dir = OUTPUT_FOLDER / "misconfig_master"
+    output_dir.mkdir(exist_ok=True)
+    output_path = output_dir / "Misconfig_Master_Report.xlsx"
 
-    cmd = ["python", script_path, "--input", str(final_report_path), "--output", str(output_path)]
+    script = SCRIPTS_MISCONFIG / "automate_master_report.py"
 
-    ok, output = execute_and_log(cmd, "automate_master_report.py", str(output_path))
+    cmd = ["python", str(script), "--input", str(final_file), "--output", str(output_path)]
+    ok = execute_and_log(cmd, "automate_master_report.py", str(output_path))
 
-    if ok:
-        flash(f"Misconfiguration Master report executed successfully. Saved to: {output_path}", "success")
-    else:
-        flash("Misconfiguration Master report failed. Check Logs -> Error Logs for details.", "danger")
-
+    flash(
+        ("Master Misconfig done!" if ok else "Error — check logs."),
+        "success" if ok else "danger",
+    )
     return redirect(url_for("index"))
 
-# ========== LOGS UI ROUTES ==========
-@app.route("/logs", methods=["GET"])
+# -----------------------------------------------------------------------------
+# LOGS UI
+# -----------------------------------------------------------------------------
+@app.route("/logs")
 def logs_index():
-    """
-    Logs landing page - show both logs with quick stats.
-    """
-    err_exists = ERROR_LOG.exists()
-    proc_exists = PROCESSED_LOG.exists()
-
-    # quick size and last-modified
-    def meta(p: Path):
-        if not p.exists():
-            return {"exists": False, "size": 0, "mtime": None}
-        return {"exists": True, "size": p.stat().st_size, "mtime": datetime.utcfromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S UTC")}
     return render_template(
         "logs.html",
-        error_meta=meta(ERROR_LOG),
-        processed_meta=meta(PROCESSED_LOG),
+        error_data=tail_file(ERROR_LOG),
+        processed_data=tail_file(PROCESSED_LOG),
     )
 
-@app.route("/logs/error", methods=["GET", "POST"])
-def logs_error():
-    """
-    View error log contents and allow clearing.
-    """
-    if request.method == "POST":
-        action = request.form.get("action")
-        if action == "clear":
-            with _log_lock:
-                if ERROR_LOG.exists():
-                    ERROR_LOG.unlink()
-            flash("Error log cleared.", "success")
-            return redirect(url_for("logs_error"))
-
-    data = tail_file(ERROR_LOG, max_chars=20000)
-    return render_template("logs.html", view="error", content=data, error_meta={"exists": ERROR_LOG.exists()})
-
-@app.route("/logs/processed", methods=["GET", "POST"])
-def logs_processed():
-    """
-    View processed log contents and allow clearing.
-    """
-    if request.method == "POST":
-        action = request.form.get("action")
-        if action == "clear":
-            with _log_lock:
-                if PROCESSED_LOG.exists():
-                    PROCESSED_LOG.unlink()
-            flash("Processed log cleared.", "success")
-            return redirect(url_for("logs_processed"))
-
-    data = tail_file(PROCESSED_LOG, max_chars=20000)
-    return render_template("logs.html", view="processed", content=data, processed_meta={"exists": PROCESSED_LOG.exists()})
-
-@app.route("/logs/download/<which>", methods=["GET"])
-def logs_download(which):
-    """
-    Download the full log file.
-    """
-    if which == "error":
-        path = ERROR_LOG
-    else:
-        path = PROCESSED_LOG
-    if not path.exists():
-        flash("Log file not found.", "danger")
-        return redirect(url_for("logs_index"))
-    return send_file(str(path), as_attachment=True, download_name=path.name)
-
-# ========== RUN APP ==========
+# -----------------------------------------------------------------------------
+# RUN FLASK
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
-    # debug True for local testing only
     app.run(host="0.0.0.0", port=5000, debug=True)
