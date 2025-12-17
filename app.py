@@ -8,19 +8,17 @@ from flask import (
     send_file, abort
 )
 
-# -----------------------------
-# App setup
-# -----------------------------
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
 
+# -----------------------------
+# Paths
+# -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
-
-VULN_DIR = os.path.join(BASE_DIR, "Vul_Automation")
-MISCONF_DIR = os.path.join(BASE_DIR, "MisConfig_Automation")
+VUL_DIR = os.path.join(BASE_DIR, "Vul_Automation")
+MIS_DIR = os.path.join(BASE_DIR, "MisConfig_Automation")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -29,26 +27,43 @@ ERROR_LOG = os.path.join(LOG_DIR, "error.log")
 PROC_LOG = os.path.join(LOG_DIR, "processed.log")
 
 # -----------------------------
-# Logging helpers
+# Helpers
 # -----------------------------
-def log_info(msg):
-    with open(PROC_LOG, "a") as f:
-        f.write(f"[{datetime.now()}] INFO: {msg}\n")
-
-def log_error(msg):
-    with open(ERROR_LOG, "a") as f:
-        f.write(f"[{datetime.now()}] ERROR: {msg}\n")
-
 def latest_upload():
-    files = [
-        os.path.join(UPLOAD_DIR, f)
-        for f in os.listdir(UPLOAD_DIR)
-        if os.path.isfile(os.path.join(UPLOAD_DIR, f))
-    ]
-    return max(files, key=os.path.getmtime) if files else None
+    files = sorted(
+        [os.path.join(UPLOAD_DIR, f) for f in os.listdir(UPLOAD_DIR)],
+        key=os.path.getmtime,
+        reverse=True
+    )
+    return files[0] if files else None
+
+
+def log(msg, error=False):
+    path = ERROR_LOG if error else PROC_LOG
+    with open(path, "a") as f:
+        f.write(f"[{datetime.now()}] {msg}\n")
+
+
+def run_script(cmd, cwd):
+    try:
+        log(f"Running: {' '.join(cmd)}")
+        subprocess.run(
+            cmd,
+            cwd=cwd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        log("Completed successfully")
+        return True
+    except subprocess.CalledProcessError as e:
+        log(e.stderr, error=True)
+        return False
+
 
 # -----------------------------
-# Main page
+# Main Page
 # -----------------------------
 @app.route("/")
 def index():
@@ -70,13 +85,12 @@ def upload():
 
     path = os.path.join(UPLOAD_DIR, f.filename)
     f.save(path)
-
-    log_info(f"Uploaded file: {path}")
     flash(f"Uploaded {f.filename}", "success")
+    log(f"Uploaded file {f.filename}")
     return redirect(url_for("index"))
 
 # -----------------------------
-# Vulnerability – DevOps
+# Vulnerability
 # -----------------------------
 @app.route("/run/vuln/devops", methods=["POST"])
 def run_vuln_devops():
@@ -85,78 +99,86 @@ def run_vuln_devops():
         flash("Upload a report first", "danger")
         return redirect(url_for("index"))
 
-    script = os.path.join(VULN_DIR, "split_vulns.py")
+    ok = run_script(
+        ["python3", "split_vulns.py", report],
+        cwd=VUL_DIR
+    )
 
-    try:
-        log_info("Starting Vulnerability DevOps segregation")
-        subprocess.run(
-            ["python", script, report],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        log_info("Vulnerability DevOps completed successfully")
-        flash("Vulnerability DevOps run completed", "success")
-    except subprocess.CalledProcessError as e:
-        log_error(e.stderr)
-        flash("Vulnerability DevOps failed", "danger")
-
+    flash(
+        "Vulnerability DevOps completed" if ok else "Vulnerability DevOps failed",
+        "success" if ok else "danger"
+    )
     return redirect(url_for("index"))
 
-# -----------------------------
-# Vulnerability – Master
-# -----------------------------
+
 @app.route("/run/vuln/master", methods=["POST"])
 def run_vuln_master():
     report = latest_upload()
-    if not report:
-        flash("Upload a report first", "danger")
-        return redirect(url_for("index"))
+    ok = run_script(
+        ["python3", "automated_master_report.py", report],
+        cwd=VUL_DIR
+    )
 
-    script = os.path.join(VULN_DIR, "automate_master_report.py")
-
-    try:
-        log_info("Starting Vulnerability Master Report")
-        subprocess.run(
-            ["python", script, report],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        log_info("Vulnerability Master Report completed")
-        flash("Vulnerability master report generated", "success")
-    except subprocess.CalledProcessError as e:
-        log_error(e.stderr)
-        flash("Vulnerability master failed", "danger")
-
+    flash(
+        "Vulnerability Master report generated" if ok else "Vulnerability Master failed",
+        "success" if ok else "danger"
+    )
     return redirect(url_for("index"))
 
 # -----------------------------
-# Misconfiguration – DevOps
+# Misconfiguration
 # -----------------------------
 @app.route("/run/misconfig/devops", methods=["POST"])
 def run_misconfig_devops():
     report = latest_upload()
-    if not report:
-        flash("Upload a report first", "danger")
-        return redirect(url_for("index"))
+    ok = run_script(
+        ["python3", "segregate_misconfigs.py", report],
+        cwd=MIS_DIR
+    )
 
-    script = os.path.join(MISCONF_DIR, "devops_split.py")
+    flash(
+        "Misconfig DevOps completed" if ok else "Misconfig DevOps failed",
+        "success" if ok else "danger"
+    )
+    return redirect(url_for("index"))
 
-    try:
-        log_info("Starting Misconfiguration DevOps")
-        subprocess.run(
-            ["python", script, report],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        log_info("Misconfiguration DevOps completed")
-        flash("Misconfiguration DevOps completed", "success")
-    except subprocess.CalledProcessError as e:
-        log_error(e.stderr)
-        flash("Misconfiguration DevOps failed", "danger")
 
+@app.route("/run/misconfig/aha", methods=["POST"])
+def run_misconfig_aha():
+    ok = run_script(
+        ["python3", "Misconfigp2.py"],
+        cwd=MIS_DIR
+    )
+    flash(
+        "AHA/PMP/AZURE/PP split completed" if ok else "AHA split failed",
+        "success" if ok else "danger"
+    )
+    return redirect(url_for("index"))
+
+
+@app.route("/run/misconfig/final", methods=["POST"])
+def run_misconfig_final():
+    ok = run_script(
+        ["python3", "classify_misconfigs.py"],
+        cwd=MIS_DIR
+    )
+    flash(
+        "Rules applied" if ok else "Rules failed",
+        "success" if ok else "danger"
+    )
+    return redirect(url_for("index"))
+
+
+@app.route("/run/misconfig/master", methods=["POST"])
+def run_misconfig_master():
+    ok = run_script(
+        ["python3", "automate_master_report.py"],
+        cwd=MIS_DIR
+    )
+    flash(
+        "Misconfig Master report generated" if ok else "Master failed",
+        "success" if ok else "danger"
+    )
     return redirect(url_for("index"))
 
 # -----------------------------
@@ -164,29 +186,17 @@ def run_misconfig_devops():
 # -----------------------------
 @app.route("/logs")
 def logs_index():
-    def meta(path):
-        if not os.path.exists(path):
-            return {"exists": False}
-        st = os.stat(path)
-        return {
-            "exists": True,
-            "size": st.st_size,
-            "mtime": datetime.fromtimestamp(st.st_mtime)
-        }
+    return render_template("logs.html")
 
-    return render_template(
-        "logs.html",
-        error_meta=meta(ERROR_LOG),
-        processed_meta=meta(PROC_LOG)
-    )
 
 @app.route("/logs/<which>")
 def logs_view(which):
     path = ERROR_LOG if which == "error" else PROC_LOG
     if not os.path.exists(path):
         abort(404)
-    with open(path, "r", errors="ignore") as f:
+    with open(path) as f:
         return f"<pre>{f.read()}</pre>"
+
 
 @app.route("/logs/download/<which>")
 def logs_download(which):
@@ -195,6 +205,6 @@ def logs_download(which):
         abort(404)
     return send_file(path, as_attachment=True)
 
-# -----------------------------
+
 if __name__ == "__main__":
     app.run(debug=True)
