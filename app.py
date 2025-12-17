@@ -12,9 +12,6 @@ from flask import (
     abort,
 )
 
-# --------------------------------------------------
-# App setup
-# --------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
@@ -25,9 +22,11 @@ os.makedirs(LOG_DIR, exist_ok=True)
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
 
-# --------------------------------------------------
+
+# ---------------------------------------------------
 # Helpers
-# --------------------------------------------------
+# ---------------------------------------------------
+
 def get_log_path(which):
     if which == "error":
         return os.path.join(LOG_DIR, "error.log")
@@ -35,9 +34,23 @@ def get_log_path(which):
         return os.path.join(LOG_DIR, "processed.log")
     return None
 
-# --------------------------------------------------
+
+def log_meta(path):
+    if not path or not os.path.exists(path):
+        return {"exists": False, "size": 0, "mtime": None}
+
+    stat = os.stat(path)
+    return {
+        "exists": True,
+        "size": stat.st_size,
+        "mtime": stat.st_mtime,
+    }
+
+
+# ---------------------------------------------------
 # Main pages
-# --------------------------------------------------
+# ---------------------------------------------------
+
 @app.route("/")
 def index():
     return render_template(
@@ -50,9 +63,11 @@ def index():
         last_output=None,
     )
 
-# --------------------------------------------------
+
+# ---------------------------------------------------
 # Upload
-# --------------------------------------------------
+# ---------------------------------------------------
+
 @app.route("/upload", methods=["POST"])
 def upload():
     file = request.files.get("report_file")
@@ -60,78 +75,74 @@ def upload():
         flash("No file uploaded", "danger")
         return redirect(url_for("index"))
 
-    save_path = os.path.join(UPLOAD_DIR, file.filename)
-    file.save(save_path)
-    flash(f"Uploaded: {file.filename}", "success")
+    path = os.path.join(UPLOAD_DIR, file.filename)
+    file.save(path)
+    flash("Report uploaded successfully", "success")
     return redirect(url_for("index"))
 
-# --------------------------------------------------
-# Vulnerability routes (placeholders for now)
-# --------------------------------------------------
-@app.route("/run/vuln/devops", methods=["POST"])
-def run_vuln_devops():
-    flash("Vulnerability DevOps segregation completed.", "success")
-    return redirect(url_for("index"))
 
-@app.route("/run/vuln/master", methods=["POST"])
-def run_vuln_master():
-    flash("Master Vulnerability report generated.", "success")
-    return redirect(url_for("index"))
+# ---------------------------------------------------
+# Logs pages (FIXED)
+# ---------------------------------------------------
 
-# --------------------------------------------------
-# Misconfiguration routes (placeholders)
-# --------------------------------------------------
-@app.route("/run/misconfig/devops", methods=["POST"])
-def run_misconfig_devops():
-    flash("Misconfiguration DevOps segregation completed.", "success")
-    return redirect(url_for("index"))
-
-@app.route("/run/misconfig/aha", methods=["POST"])
-def run_misconfig_aha():
-    flash("AHA / PMP / AZURE / PP split completed.", "success")
-    return redirect(url_for("index"))
-
-@app.route("/run/misconfig/final", methods=["POST"])
-def run_misconfig_final():
-    flash("Rules applied. Final misconfig report ready.", "success")
-    return redirect(url_for("index"))
-
-@app.route("/run/misconfig/master", methods=["POST"])
-def run_misconfig_master():
-    flash("Master misconfiguration report generated.", "success")
-    return redirect(url_for("index"))
-
-# --------------------------------------------------
-# Logs views
-# --------------------------------------------------
 @app.route("/logs")
 def logs_index():
-    return render_template("logs.html")
+    return render_template(
+        "logs.html",
+        view=None,
+        content=None,
+        error_meta=log_meta(get_log_path("error")),
+        processed_meta=log_meta(get_log_path("processed")),
+    )
 
-@app.route("/logs/<which>")
-def logs_view(which):
-    path = get_log_path(which)
-    if not path or not os.path.exists(path):
-        return f"No {which} logs found.", 404
 
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
+@app.route("/logs/error")
+def logs_error():
+    path = get_log_path("error")
+    content = ""
 
-    return f"<pre>{content}</pre>"
+    if path and os.path.exists(path):
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()[-20000:]
 
-# --------------------------------------------------
-# ✅ FIXED: Logs download route (THIS WAS MISSING)
-# --------------------------------------------------
+    return render_template(
+        "logs.html",
+        view="error",
+        content=content,
+        error_meta=log_meta(path),
+        processed_meta=log_meta(get_log_path("processed")),
+    )
+
+
+@app.route("/logs/processed")
+def logs_processed():
+    path = get_log_path("processed")
+    content = ""
+
+    if path and os.path.exists(path):
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()[-20000:]
+
+    return render_template(
+        "logs.html",
+        view="processed",
+        content=content,
+        error_meta=log_meta(get_log_path("error")),
+        processed_meta=log_meta(path),
+    )
+
+
 @app.route("/logs/download/<which>")
 def logs_download(which):
     path = get_log_path(which)
     if not path or not os.path.exists(path):
         abort(404)
-
     return send_file(path, as_attachment=True)
 
-# --------------------------------------------------
-# Entry point
-# --------------------------------------------------
+
+# ---------------------------------------------------
+# App entry
+# ---------------------------------------------------
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)
