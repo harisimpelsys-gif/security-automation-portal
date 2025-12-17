@@ -60,7 +60,12 @@
 
 <!-- Background video -->
 <video autoplay muted loop
-       style="position:fixed;inset:0;object-fit:cover;z-index:-1;filter:brightness(.3)">
+       style="position:fixed;
+              inset:0;
+              object-fit:cover;
+              z-index:-1;
+              filter:brightness(.3);
+              pointer-events:none;">
   <source src="{{ url_for('static', filename='landing.mp4') }}" type="video/mp4">
 </video>
 
