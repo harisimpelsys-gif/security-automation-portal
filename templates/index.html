@@ -5,52 +5,50 @@
   <title>Security Automation Portal</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
 
   <style>
-    :root {
-      --bg-body:#020617;
-      --text-main:#e5e7eb;
-      --text-muted:#9ca3af;
+    :root{
+      --bg:#020617;
+      --text:#e5e7eb;
     }
 
-    body {
+    body{
       margin:0;
       background:#000;
-      color:var(--text-main);
-      font-family:system-ui;
+      color:var(--text);
+      font-family:system-ui, -apple-system, "Segoe UI", sans-serif;
+      overflow-x:hidden;
     }
 
-    /* 🔑 CRITICAL FIX */
-    .alert {
-      pointer-events: none;
-    }
-
-    .page { display:none; }
-    .page.active { display:block; }
-
-    .list-group {
-      position: relative;
-      z-index: 10;
-    }
-
-    .logs-iframe {
+    video.bg{
+      position:fixed;
+      inset:0;
       width:100%;
-      height:64vh;
+      height:100%;
+      object-fit:cover;
+      z-index:-1;
+      filter:brightness(.35);
+      pointer-events:none; /* 🔥 IMPORTANT */
+    }
+
+    .page{display:none}
+    .page.active{display:block}
+
+    .logs-iframe{
+      width:100%;
+      height:60vh;
       border:1px solid #333;
       border-radius:8px;
       background:#000;
     }
 
-    pre {
+    pre{
       background:#020617;
       color:#e5e7eb;
       padding:12px;
       border-radius:8px;
-      max-height:50vh;
+      max-height:40vh;
       overflow:auto;
     }
   </style>
@@ -58,14 +56,8 @@
 
 <body>
 
-<!-- Background video -->
-<video autoplay muted loop
-       style="position:fixed;
-              inset:0;
-              object-fit:cover;
-              z-index:-1;
-              filter:brightness(.3);
-              pointer-events:none;">
+<!-- Background video (NON BLOCKING) -->
+<video class="bg" autoplay muted loop playsinline>
   <source src="{{ url_for('static', filename='landing.mp4') }}" type="video/mp4">
 </video>
 
@@ -73,21 +65,16 @@
 
   <h2 class="mb-4">Security Automation Portal</h2>
 
-  <!-- Flash messages (NON-BLOCKING) -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="mb-3">
-        {% for cat,msg in messages %}
-          <div class="alert alert-{{ cat }} py-2 mb-2">
-            {{ msg }}
-          </div>
-        {% endfor %}
-      </div>
+      {% for cat,msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
     {% endif %}
   {% endwith %}
 
   <div class="row">
-    <!-- Sidebar -->
+    <!-- SIDEBAR -->
     <div class="col-md-3">
       <div class="list-group">
         <button class="list-group-item active" data-page="upload">Upload</button>
@@ -98,18 +85,13 @@
       </div>
     </div>
 
-    <!-- Main -->
+    <!-- CONTENT -->
     <div class="col-md-9">
 
       <!-- Upload -->
       <div class="page active" id="upload">
-        <form method="post"
-              action="{{ url_for('upload') }}"
-              enctype="multipart/form-data">
-          <input type="file"
-                 name="report_file"
-                 class="form-control mb-2"
-                 required>
+        <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+          <input type="file" name="report_file" class="form-control mb-2" required>
           <button class="btn btn-primary">Upload</button>
         </form>
       </div>
@@ -117,27 +99,23 @@
       <!-- Vulnerability -->
       <div class="page" id="vuln">
         <form method="post" action="{{ url_for('run_vuln_devops') }}">
-          <button class="btn btn-success mb-2 w-100">
-            Run DevOps Segregation
-          </button>
+          <button class="btn btn-success w-100 mb-2">Run DevOps Segregation</button>
         </form>
         <form method="post" action="{{ url_for('run_vuln_master') }}">
-          <button class="btn btn-outline-success w-100">
-            Run Master Vulnerability
-          </button>
+          <button class="btn btn-outline-success w-100">Run Master Vulnerability</button>
         </form>
       </div>
 
       <!-- Misconfiguration -->
       <div class="page" id="misconfig">
         <form method="post" action="{{ url_for('run_misconfig_devops') }}">
-          <button class="btn btn-warning mb-2 w-100">Stage 1 – DevOps</button>
+          <button class="btn btn-warning w-100 mb-2">Stage 1 – DevOps</button>
         </form>
         <form method="post" action="{{ url_for('run_misconfig_aha') }}">
-          <button class="btn btn-outline-warning mb-2 w-100">Stage 2 – Split</button>
+          <button class="btn btn-outline-warning w-100 mb-2">Stage 2 – Split</button>
         </form>
         <form method="post" action="{{ url_for('run_misconfig_final') }}">
-          <button class="btn btn-outline-warning mb-2 w-100">Stage 3 – Rules</button>
+          <button class="btn btn-outline-warning w-100 mb-2">Stage 3 – Rules</button>
         </form>
         <form method="post" action="{{ url_for('run_misconfig_master') }}">
           <button class="btn btn-outline-warning w-100">Stage 4 – Master</button>
@@ -161,28 +139,18 @@
         </div>
 
         <div class="mb-3 d-flex gap-2">
-          <a class="btn btn-secondary"
-             href="{{ url_for('logs_download', which='error') }}"
-             target="_blank">
-            Download Error Log
+          <a class="btn btn-secondary" href="{{ url_for('logs_download', which='error') }}" target="_blank">
+            Download Error
           </a>
-
-          <a class="btn btn-secondary"
-             href="{{ url_for('logs_download', which='processed') }}"
-             target="_blank">
-            Download Processed Log
+          <a class="btn btn-secondary" href="{{ url_for('logs_download', which='processed') }}" target="_blank">
+            Download Processed
           </a>
-
-          <a class="btn btn-primary"
-             href="{{ url_for('logs_index') }}"
-             target="_blank">
+          <a class="btn btn-primary" href="{{ url_for('logs_index') }}" target="_blank">
             Open /logs
           </a>
         </div>
 
-        <iframe id="logs-frame"
-                class="logs-iframe"
-                src="{{ url_for('logs_index') }}"></iframe>
+        <iframe id="logs-frame" class="logs-iframe" src="{{ url_for('logs_index') }}"></iframe>
 
         <h6 class="mt-3">Preview</h6>
         <pre id="logs-preview">(load logs)</pre>
@@ -193,32 +161,38 @@
 </div>
 
 <script>
+  // Page navigation
   const pages = document.querySelectorAll(".page");
-
   document.querySelectorAll(".list-group-item").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".list-group-item")
-        .forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".list-group-item").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-
       pages.forEach(p => p.classList.remove("active"));
       document.getElementById(btn.dataset.page).classList.add("active");
     });
   });
 
+  // Logs loading (NO REGEX, NO ERRORS)
   const frame = document.getElementById("logs-frame");
   const preview = document.getElementById("logs-preview");
 
-  async function load(which) {
+  async function loadLogs(which){
     frame.src = "/logs/" + which;
-    const r = await fetch("/logs/" + which);
-    const t = await r.text();
-    const m = t.match(/<pre[^>]*>([\\s\\S]*?)<\\/pre>/i);
-    preview.textContent = m ? m[1] : "(no preview)";
+
+    try{
+      const r = await fetch("/logs/" + which);
+      const html = await r.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const pre = doc.querySelector("pre");
+      preview.textContent = pre ? pre.innerText : "(no preview)";
+    }catch(e){
+      preview.textContent = "(failed to load logs)";
+    }
   }
 
-  document.getElementById("load-error").onclick = () => load("error");
-  document.getElementById("load-processed").onclick = () => load("processed");
+  document.getElementById("load-error").onclick = () => loadLogs("error");
+  document.getElementById("load-processed").onclick = () => loadLogs("processed");
 </script>
 
 </body>
