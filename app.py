@@ -3,9 +3,8 @@ import os
 import subprocess
 from datetime import datetime
 from flask import (
-    Flask, render_template, request,
-    redirect, url_for, flash,
-    send_file, abort
+    Flask, render_template, request, redirect,
+    url_for, flash, send_file, abort
 )
 
 app = Flask(__name__)
@@ -15,13 +14,17 @@ app.secret_key = "dev-secret-key"
 # Paths
 # -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
-VUL_DIR = os.path.join(BASE_DIR, "Vul_Automation")
-MIS_DIR = os.path.join(BASE_DIR, "MisConfig_Automation")
+OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
+
+VULN_DIR = os.path.join(BASE_DIR, "Vul_Automation")
+MISCONF_DIR = os.path.join(BASE_DIR, "MisConfig_Automation")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 ERROR_LOG = os.path.join(LOG_DIR, "error.log")
 PROC_LOG = os.path.join(LOG_DIR, "processed.log")
@@ -29,6 +32,12 @@ PROC_LOG = os.path.join(LOG_DIR, "processed.log")
 # -----------------------------
 # Helpers
 # -----------------------------
+def log(msg, error=False):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    path = ERROR_LOG if error else PROC_LOG
+    with open(path, "a") as f:
+        f.write(f"[{ts}] {msg}\n")
+
 def latest_upload():
     files = sorted(
         [os.path.join(UPLOAD_DIR, f) for f in os.listdir(UPLOAD_DIR)],
@@ -37,33 +46,33 @@ def latest_upload():
     )
     return files[0] if files else None
 
-
-def log(msg, error=False):
-    path = ERROR_LOG if error else PROC_LOG
-    with open(path, "a") as f:
-        f.write(f"[{datetime.now()}] {msg}\n")
-
-
 def run_script(cmd, cwd):
+    """
+    SAFE subprocess execution
+    - Captures stdout + stderr
+    - Logs everything
+    - Does NOT block worker forever
+    """
     try:
-        log(f"Running: {' '.join(cmd)}")
-        subprocess.run(
+        log(f"Executing: {' '.join(cmd)}")
+        result = subprocess.run(
             cmd,
             cwd=cwd,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            capture_output=True,
+            text=True,
+            timeout=300
         )
-        log("Completed successfully")
-        return True
-    except subprocess.CalledProcessError as e:
-        log(e.stderr, error=True)
+        if result.stdout:
+            log(result.stdout)
+        if result.stderr:
+            log(result.stderr, error=True)
+        return result.returncode == 0
+    except Exception as e:
+        log(str(e), error=True)
         return False
 
-
 # -----------------------------
-# Main Page
+# Pages
 # -----------------------------
 @app.route("/")
 def index():
@@ -85,8 +94,8 @@ def upload():
 
     path = os.path.join(UPLOAD_DIR, f.filename)
     f.save(path)
+    log(f"Uploaded file: {path}")
     flash(f"Uploaded {f.filename}", "success")
-    log(f"Uploaded file {f.filename}")
     return redirect(url_for("index"))
 
 # -----------------------------
@@ -94,14 +103,14 @@ def upload():
 # -----------------------------
 @app.route("/run/vuln/devops", methods=["POST"])
 def run_vuln_devops():
-    report = latest_upload()
-    if not report:
-        flash("Upload a report first", "danger")
+    infile = latest_upload()
+    if not infile:
+        flash("No uploaded file found", "danger")
         return redirect(url_for("index"))
 
     ok = run_script(
-        ["python3", "split_vulns.py", report],
-        cwd=VUL_DIR
+        ["python3", "split_vulns.py", infile, OUTPUT_DIR],
+        cwd=VULN_DIR
     )
 
     flash(
@@ -110,17 +119,14 @@ def run_vuln_devops():
     )
     return redirect(url_for("index"))
 
-
 @app.route("/run/vuln/master", methods=["POST"])
 def run_vuln_master():
-    report = latest_upload()
     ok = run_script(
-        ["python3", "automated_master_report.py", report],
-        cwd=VUL_DIR
+        ["python3", "automate_master_report.py", OUTPUT_DIR],
+        cwd=VULN_DIR
     )
-
     flash(
-        "Vulnerability Master report generated" if ok else "Vulnerability Master failed",
+        "Vulnerability master generated" if ok else "Vulnerability master failed",
         "success" if ok else "danger"
     )
     return redirect(url_for("index"))
@@ -130,55 +136,42 @@ def run_vuln_master():
 # -----------------------------
 @app.route("/run/misconfig/devops", methods=["POST"])
 def run_misconfig_devops():
-    report = latest_upload()
     ok = run_script(
-        ["python3", "segregate_misconfigs.py", report],
-        cwd=MIS_DIR
+        ["python3", "stage1_devops.py"],
+        cwd=MISCONF_DIR
     )
-
-    flash(
-        "Misconfig DevOps completed" if ok else "Misconfig DevOps failed",
-        "success" if ok else "danger"
-    )
+    flash("Misconfig DevOps completed" if ok else "Misconfig DevOps failed",
+          "success" if ok else "danger")
     return redirect(url_for("index"))
-
 
 @app.route("/run/misconfig/aha", methods=["POST"])
 def run_misconfig_aha():
     ok = run_script(
-        ["python3", "Misconfigp2.py"],
-        cwd=MIS_DIR
+        ["python3", "stage2_split.py"],
+        cwd=MISCONF_DIR
     )
-    flash(
-        "AHA/PMP/AZURE/PP split completed" if ok else "AHA split failed",
-        "success" if ok else "danger"
-    )
+    flash("Misconfig split completed" if ok else "Misconfig split failed",
+          "success" if ok else "danger")
     return redirect(url_for("index"))
-
 
 @app.route("/run/misconfig/final", methods=["POST"])
 def run_misconfig_final():
     ok = run_script(
-        ["python3", "classify_misconfigs.py"],
-        cwd=MIS_DIR
+        ["python3", "stage3_rules.py"],
+        cwd=MISCONF_DIR
     )
-    flash(
-        "Rules applied" if ok else "Rules failed",
-        "success" if ok else "danger"
-    )
+    flash("Misconfig rules applied" if ok else "Misconfig rules failed",
+          "success" if ok else "danger")
     return redirect(url_for("index"))
-
 
 @app.route("/run/misconfig/master", methods=["POST"])
 def run_misconfig_master():
     ok = run_script(
-        ["python3", "automate_master_report.py"],
-        cwd=MIS_DIR
+        ["python3", "stage4_master.py"],
+        cwd=MISCONF_DIR
     )
-    flash(
-        "Misconfig Master report generated" if ok else "Master failed",
-        "success" if ok else "danger"
-    )
+    flash("Misconfig master generated" if ok else "Misconfig master failed",
+          "success" if ok else "danger")
     return redirect(url_for("index"))
 
 # -----------------------------
@@ -186,8 +179,13 @@ def run_misconfig_master():
 # -----------------------------
 @app.route("/logs")
 def logs_index():
-    return render_template("logs.html")
-
+    return render_template(
+        "logs.html",
+        error_meta={"exists": os.path.exists(ERROR_LOG),
+                    "size": os.path.getsize(ERROR_LOG) if os.path.exists(ERROR_LOG) else 0},
+        processed_meta={"exists": os.path.exists(PROC_LOG),
+                         "size": os.path.getsize(PROC_LOG) if os.path.exists(PROC_LOG) else 0}
+    )
 
 @app.route("/logs/<which>")
 def logs_view(which):
@@ -197,7 +195,6 @@ def logs_view(which):
     with open(path) as f:
         return f"<pre>{f.read()}</pre>"
 
-
 @app.route("/logs/download/<which>")
 def logs_download(which):
     path = ERROR_LOG if which == "error" else PROC_LOG
@@ -205,6 +202,6 @@ def logs_download(which):
         abort(404)
     return send_file(path, as_attachment=True)
 
-
+# -----------------------------
 if __name__ == "__main__":
     app.run(debug=True)
