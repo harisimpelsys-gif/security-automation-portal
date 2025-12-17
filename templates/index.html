@@ -107,20 +107,33 @@
       </div>
 
       <!-- Misconfiguration -->
-      <div class="page" id="misconfig">
-        <form method="post" action="{{ url_for('run_misconfig_devops') }}">
-          <button class="btn btn-warning w-100 mb-2">Stage 1 – DevOps</button>
-        </form>
-        <form method="post" action="{{ url_for('run_misconfig_aha') }}">
-          <button class="btn btn-outline-warning w-100 mb-2">Stage 2 – Split</button>
-        </form>
-        <form method="post" action="{{ url_for('run_misconfig_final') }}">
-          <button class="btn btn-outline-warning w-100 mb-2">Stage 3 – Rules</button>
-        </form>
-        <form method="post" action="{{ url_for('run_misconfig_master') }}">
-          <button class="btn btn-outline-warning w-100">Stage 4 – Master</button>
-        </form>
-      </div>
+      <!-- Misconfiguration -->
+<div class="page" id="misconfig">
+  <form method="post" action="{{ url_for('run_misconfig_devops') }}">
+    <button class="btn btn-warning mb-2 w-100">
+      Stage 1 – DevOps
+    </button>
+  </form>
+
+  <form method="post" action="{{ url_for('run_misconfig_aha') }}">
+    <button class="btn btn-outline-warning mb-2 w-100">
+      Stage 2 – AHA / PMP / AZURE / PP
+    </button>
+  </form>
+
+  <form method="post" action="{{ url_for('run_misconfig_final') }}">
+    <button class="btn btn-outline-warning mb-2 w-100">
+      Stage 3 – Apply Rules
+    </button>
+  </form>
+
+  <form method="post" action="{{ url_for('run_misconfig_master') }}">
+    <button class="btn btn-outline-warning w-100">
+      Stage 4 – Master Report
+    </button>
+  </form>
+</div>
+
 
       <!-- Insights -->
       <div class="page" id="insights">
