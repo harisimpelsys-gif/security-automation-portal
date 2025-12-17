@@ -358,7 +358,10 @@
                     <div style="display:flex; gap:8px; margin-top:8px;">
                       <button id="logs-load-error" class="btn btn-outline-danger">Load Error Logs</button>
                       <button id="logs-load-processed" class="btn btn-outline-success">Load Processed Logs</button>
-                      <a id="logs-download-error" class="btn btn-secondary" href="{{ url_for('logs_download', which='error') }}">Download Error</a>
+                      <div class="mt-3">
+                        <a class="btn btn-secondary" href="{{ url_for('logs_download', which='error') }}">Download Error Log</a>
+                        <a class="btn btn-secondary" href="{{ url_for('logs_download', which='processed') }}">Download Processed Log</a>
+                      </div>
                       <a id="logs-download-processed" class="btn btn-secondary" href="{{ url_for('logs_download', which='processed') }}">Download Processed</a>
                     </div>
                   </div>
