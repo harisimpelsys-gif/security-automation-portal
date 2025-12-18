@@ -9,7 +9,9 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-# ================= CONFIG ================= #
+# ======================================================
+# CONFIG
+# ======================================================
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -18,7 +20,7 @@ OUTPUT_FOLDER = os.path.join(BASE_DIR, "outputs")
 LOG_FOLDER = os.path.join(BASE_DIR, "logs")
 
 ALLOWED_EXTENSIONS = {"xlsx", "csv"}
-MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB (increase anytime)
+MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200 MB
 
 APP_PASSWORD = os.getenv("APP_PASSWORD", "changeme")
 
@@ -26,20 +28,24 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(LOG_FOLDER, exist_ok=True)
 
-# ================= APP INIT ================= #
+# ======================================================
+# APP INIT
+# ======================================================
 
 app = Flask(__name__)
 app.secret_key = "security-automation-secret"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
-# ================= HELPERS ================= #
+# ======================================================
+# HELPERS
+# ======================================================
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def ensure_dir(path):
-    os.makedirs(path, exist_ok=True)
+    os.makedirs(path, exist_okoxist_ok=True)
 
 def log_error(err):
     logfile = os.path.join(LOG_FOLDER, "app_errors.log")
@@ -47,14 +53,18 @@ def log_error(err):
         f.write(f"\n[{datetime.now()}]\n")
         f.write(err + "\n")
 
-def run_script(script_path, args):
-    subprocess.run(["python", script_path] + args, check=True)
+def run_cmd(cmd):
+    """
+    Run subprocess safely and raise error if it fails
+    """
+    subprocess.run(cmd, check=True)
 
-# ================= AUTH ================= #
+# ======================================================
+# AUTH
+# ======================================================
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    # If already logged in, go straight to dashboard
     if session.get("auth"):
         return redirect(url_for("dashboard"))
 
@@ -75,19 +85,22 @@ def logout():
 
 @app.before_request
 def protect():
-    # Allow login, logout and static files without auth
     if request.endpoint in ("login", "logout", "static"):
         return
     if not session.get("auth"):
         return redirect(url_for("login"))
 
-# ================= DASHBOARD ================= #
+# ======================================================
+# DASHBOARD
+# ======================================================
 
 @app.route("/index", methods=["GET"])
 def dashboard():
     return render_template("index.html")
 
-# ================= UPLOAD ================= #
+# ======================================================
+# UPLOAD
+# ======================================================
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -103,147 +116,163 @@ def upload():
 
     filename = secure_filename(file.filename)
     uid = str(uuid.uuid4())
-    save_name = f"{uid}_{filename}"
-    path = os.path.join(UPLOAD_FOLDER, save_name)
-    file.save(path)
+    saved_name = f"{uid}_{filename}"
+    saved_path = os.path.join(UPLOAD_FOLDER, saved_name)
 
-    session["uploaded_file"] = path
+    file.save(saved_path)
+    session["uploaded_file"] = saved_path
+
     flash("File uploaded successfully")
-
     return redirect(url_for("dashboard"))
 
-# ================= VULNERABILITY ================= #
+# ======================================================
+# VULNERABILITY
+# ======================================================
 
-@app.route("/run/vul/devops", methods=["GET"])
+@app.route("/run/vul/devops")
 def run_vul_devops():
     try:
         input_file = session.get("uploaded_file")
         if not input_file:
-            flash("Upload a file first")
+            flash("Upload file first")
             return redirect(url_for("dashboard"))
 
         out_dir = os.path.join(OUTPUT_FOLDER, "vul_devops")
-        ensure_dir(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
-        run_script(
+        run_cmd([
+            "python",
             os.path.join(BASE_DIR, "Vul_Automation", "split_vulns.py"),
-            [input_file, out_dir]
-        )
+            "--input", input_file,
+            "--out-dir", out_dir
+        ])
 
         return redirect(url_for("downloads", folder="vul_devops"))
 
     except Exception:
         log_error(traceback.format_exc())
-        flash("Vulnerability DevOps failed. Check logs.")
+        flash("Vulnerability DevOps failed")
         return redirect(url_for("dashboard"))
 
 
-@app.route("/run/vul/master", methods=["GET"])
+@app.route("/run/vul/master")
 def run_vul_master():
     try:
         input_file = session.get("uploaded_file")
         if not input_file:
-            flash("Upload a file first")
+            flash("Upload file first")
             return redirect(url_for("dashboard"))
 
         out_dir = os.path.join(OUTPUT_FOLDER, "vul_master")
-        ensure_dir(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
-        run_script(
+        run_cmd([
+            "python",
             os.path.join(BASE_DIR, "Vul_Automation", "automated_master_report.py"),
-            [input_file, out_dir]
-        )
+            "--input", input_file,
+            "--output", out_dir
+        ])
 
         return redirect(url_for("downloads", folder="vul_master"))
 
     except Exception:
         log_error(traceback.format_exc())
-        flash("Vulnerability Master failed.")
+        flash("Vulnerability Master failed")
         return redirect(url_for("dashboard"))
 
-# ================= MISCONFIG ================= #
+# ======================================================
+# MISCONFIGURATION
+# ======================================================
 
-@app.route("/run/mis/devops", methods=["GET"])
+@app.route("/run/mis/devops")
 def run_mis_devops():
     try:
         input_file = session.get("uploaded_file")
         if not input_file:
-            flash("Upload a file first")
+            flash("Upload file first")
             return redirect(url_for("dashboard"))
 
         out_dir = os.path.join(OUTPUT_FOLDER, "mis_devops")
-        ensure_dir(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
-        run_script(
+        run_cmd([
+            "python",
             os.path.join(BASE_DIR, "MisConfig_Automation", "segregate_misconfigs.py"),
-            [input_file, out_dir]
-        )
+            "--input", input_file,
+            "--output", out_dir
+        ])
 
         return redirect(url_for("downloads", folder="mis_devops"))
 
     except Exception:
         log_error(traceback.format_exc())
-        flash("Misconfig DevOps failed.")
+        flash("Misconfig DevOps failed")
         return redirect(url_for("dashboard"))
 
 
-@app.route("/run/mis/aha", methods=["GET"])
+@app.route("/run/mis/aha")
 def run_mis_aha():
     try:
         input_file = session.get("uploaded_file")
         if not input_file:
-            flash("Upload a file first")
+            flash("Upload file first")
             return redirect(url_for("dashboard"))
 
         out_dir = os.path.join(OUTPUT_FOLDER, "mis_aha")
-        ensure_dir(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
-        run_script(
+        run_cmd([
+            "python",
             os.path.join(BASE_DIR, "MisConfig_Automation", "Misconfigp2.py"),
-            [input_file, out_dir]
-        )
+            "--input", input_file,
+            "--output", out_dir
+        ])
 
         return redirect(url_for("downloads", folder="mis_aha"))
 
     except Exception:
         log_error(traceback.format_exc())
-        flash("Misconfig AHA split failed.")
+        flash("Misconfig AHA split failed")
         return redirect(url_for("dashboard"))
 
 
-@app.route("/run/mis/master", methods=["GET"])
+@app.route("/run/mis/master")
 def run_mis_master():
     try:
         input_file = session.get("uploaded_file")
         if not input_file:
-            flash("Upload a file first")
+            flash("Upload file first")
             return redirect(url_for("dashboard"))
 
         out_dir = os.path.join(OUTPUT_FOLDER, "mis_master")
-        ensure_dir(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
-        run_script(
+        run_cmd([
+            "python",
             os.path.join(BASE_DIR, "MisConfig_Automation", "automate_master_report.py"),
-            [input_file, out_dir]
-        )
+            "--input", input_file,
+            "--output", out_dir
+        ])
 
         return redirect(url_for("downloads", folder="mis_master"))
 
     except Exception:
         log_error(traceback.format_exc())
-        flash("Misconfig Master failed.")
+        flash("Misconfig Master failed")
         return redirect(url_for("dashboard"))
 
-# ================= DOWNLOADS ================= #
+# ======================================================
+# DOWNLOADS
+# ======================================================
 
-@app.route("/downloads/<folder>", methods=["GET"])
+@app.route("/downloads/<folder>")
 def downloads(folder):
     folder_path = os.path.join(OUTPUT_FOLDER, folder)
     files = os.listdir(folder_path) if os.path.exists(folder_path) else []
     return render_template("downloads.html", files=files, folder=folder)
 
 
-@app.route("/download/<folder>/<filename>", methods=["GET"])
+@app.route("/download/<folder>/<filename>")
 def download_file(folder, filename):
     return send_from_directory(
         os.path.join(OUTPUT_FOLDER, folder),
@@ -251,7 +280,9 @@ def download_file(folder, filename):
         as_attachment=True
     )
 
-# ================= RUN ================= #
+# ======================================================
+# RUN
+# ======================================================
 
 if __name__ == "__main__":
     app.run(debug=True)
