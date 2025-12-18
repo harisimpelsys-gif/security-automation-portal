@@ -1,196 +1,221 @@
-#!/usr/bin/env python3
 import os
+import uuid
+import zipfile
 import subprocess
+import traceback
+from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, flash, send_file, abort
+    url_for, flash, send_from_directory, session
 )
+from werkzeug.utils import secure_filename
+
+# ---------------- CONFIG ---------------- #
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+OUTPUT_FOLDER = os.path.join(BASE_DIR, "outputs")
+LOG_FOLDER = os.path.join(BASE_DIR, "logs")
+
+ALLOWED_EXTENSIONS = {"xlsx", "csv"}
+MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # easy to increase
+
+APP_PASSWORD = os.getenv("APP_PASSWORD", "changeme")
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+os.makedirs(LOG_FOLDER, exist_ok=True)
+
+# ---------------- APP INIT ---------------- #
 
 app = Flask(__name__)
-app.secret_key = "dev-secret-key"
+app.secret_key = "security-automation-secret"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+# ---------------- HELPERS ---------------- #
 
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# --------------------------------------------------
-# Helpers
-# --------------------------------------------------
-def get_log_path(which):
-    if which == "error":
-        return os.path.join(LOG_DIR, "error.log")
-    if which == "processed":
-        return os.path.join(LOG_DIR, "processed.log")
-    return None
+def log_error(err):
+    logfile = os.path.join(LOG_FOLDER, "app_errors.log")
+    with open(logfile, "a") as f:
+        f.write(f"\n[{datetime.now()}]\n")
+        f.write(err + "\n")
 
+def run_script(script_path, args):
+    cmd = ["python", script_path] + args
+    subprocess.run(cmd, check=True)
 
-def run_script(script_path, label):
-    """
-    Safe subprocess execution with logging
-    """
-    try:
-        result = subprocess.run(
-            ["python3", script_path, UPLOAD_DIR],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=600
-        )
+def ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
 
-        if result.stdout:
-            with open(get_log_path("processed"), "a") as p:
-                p.write(f"\n=== {label} OUTPUT ===\n{result.stdout}\n")
+# ---------------- AUTH ---------------- #
 
-        if result.stderr:
-            with open(get_log_path("error"), "a") as e:
-                e.write(f"\n=== {label} ERROR ===\n{result.stderr}\n")
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form.get("password") == APP_PASSWORD:
+            session["auth"] = True
+            return redirect(url_for("index"))
+        flash("Invalid password")
+    return render_template("login.html")
 
-        return result.returncode == 0
+@app.before_request
+def protect():
+    if request.endpoint not in ("login", "static") and not session.get("auth"):
+        return redirect(url_for("login"))
 
-    except Exception as ex:
-        with open(get_log_path("error"), "a") as e:
-            e.write(f"\n=== {label} EXCEPTION ===\n{str(ex)}\n")
-        return False
+# ---------------- MAIN ---------------- #
 
-
-# --------------------------------------------------
-# Index
-# --------------------------------------------------
-@app.route("/")
+@app.route("/index")
 def index():
     return render_template("index.html")
 
-
-# --------------------------------------------------
-# Upload
-# --------------------------------------------------
 @app.route("/upload", methods=["POST"])
 def upload():
-    f = request.files.get("report_file")
-    if not f:
-        flash("No file uploaded", "danger")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        flash("No file selected")
         return redirect(url_for("index"))
 
-    path = os.path.join(UPLOAD_DIR, f.filename)
-    f.save(path)
-    flash(f"Uploaded {f.filename}", "success")
+    if not allowed_file(file.filename):
+        flash("Only xlsx or csv allowed")
+        return redirect(url_for("index"))
+
+    filename = secure_filename(file.filename)
+    uid = str(uuid.uuid4())
+    save_name = f"{uid}_{filename}"
+    path = os.path.join(UPLOAD_FOLDER, save_name)
+    file.save(path)
+
+    session["uploaded_file"] = path
+    flash("File uploaded successfully")
     return redirect(url_for("index"))
 
+# ---------------- VULNERABILITY ---------------- #
 
-# --------------------------------------------------
-# Vulnerability
-# --------------------------------------------------
-@app.route("/run/vuln/devops", methods=["POST"])
-def run_vuln_devops():
-    script = os.path.join(BASE_DIR, "Vul_Automation", "split_vulns.py")
+@app.route("/run/vul/devops")
+def run_vul_devops():
+    try:
+        input_file = session.get("uploaded_file")
+        out_dir = os.path.join(OUTPUT_FOLDER, "vul_devops")
+        ensure_dir(out_dir)
 
-    if not os.path.exists(script):
-        flash("Vulnerability DevOps script missing", "danger")
-    else:
-        ok = run_script(script, "VULN DEVOPS")
-        flash(
-            "Vulnerability DevOps completed" if ok else "Vulnerability DevOps failed",
-            "success" if ok else "danger"
+        run_script(
+            os.path.join(BASE_DIR, "Vul_Automation", "split_vulns.py"),
+            [input_file, out_dir]
         )
 
-    return redirect(url_for("index"))
+        return redirect(url_for("downloads", folder="vul_devops"))
 
+    except Exception:
+        err = traceback.format_exc()
+        log_error(err)
+        flash("Vulnerability DevOps failed. Check logs.")
+        return redirect(url_for("index"))
 
-@app.route("/run/vuln/master", methods=["POST"])
-def run_vuln_master():
-    script = os.path.join(BASE_DIR, "Vul_Automation", "automate_master_report.py")
+@app.route("/run/vul/master")
+def run_vul_master():
+    try:
+        input_file = session.get("uploaded_file")
+        out_dir = os.path.join(OUTPUT_FOLDER, "vul_master")
+        ensure_dir(out_dir)
 
-    if not os.path.exists(script):
-        flash("Vulnerability Master script missing", "danger")
-    else:
-        ok = run_script(script, "VULN MASTER")
-        flash(
-            "Vulnerability Master completed" if ok else "Vulnerability Master failed",
-            "success" if ok else "danger"
+        run_script(
+            os.path.join(BASE_DIR, "Vul_Automation", "automated_master_report.py"),
+            [input_file, out_dir]
         )
 
-    return redirect(url_for("index"))
+        return redirect(url_for("downloads", folder="vul_master"))
 
+    except Exception:
+        err = traceback.format_exc()
+        log_error(err)
+        flash("Vulnerability Master failed. Check logs.")
+        return redirect(url_for("index"))
 
-# --------------------------------------------------
-# Misconfiguration
-# --------------------------------------------------
-@app.route("/run/misconfig/devops", methods=["POST"])
-def run_misconfig_devops():
-    script = os.path.join(BASE_DIR, "MisConfig_Automation", "classify_misconfigs.py")
+# ---------------- MISCONFIG ---------------- #
 
-    if not os.path.exists(script):
-        flash("Misconfig DevOps script missing", "danger")
-    else:
-        ok = run_script(script, "MISCONFIG DEVOPS")
-        flash(
-            "Misconfig DevOps completed" if ok else "Misconfig DevOps failed",
-            "success" if ok else "danger"
+@app.route("/run/mis/devops")
+def run_mis_devops():
+    try:
+        input_file = session.get("uploaded_file")
+        out_dir = os.path.join(OUTPUT_FOLDER, "mis_devops")
+        ensure_dir(out_dir)
+
+        run_script(
+            os.path.join(BASE_DIR, "MisConfig_Automation", "segregate_misconfigs.py"),
+            [input_file, out_dir]
         )
 
-    return redirect(url_for("index"))
+        return redirect(url_for("downloads", folder="mis_devops"))
 
+    except Exception:
+        err = traceback.format_exc()
+        log_error(err)
+        flash("Misconfig DevOps failed.")
+        return redirect(url_for("index"))
 
-@app.route("/run/misconfig/aha", methods=["POST"])
-def run_misconfig_aha():
-    script = os.path.join(BASE_DIR, "MisConfig_Automation", "Misconfigp2.py")
+@app.route("/run/mis/aha")
+def run_mis_aha():
+    try:
+        input_file = session.get("uploaded_file")
+        out_dir = os.path.join(OUTPUT_FOLDER, "mis_aha")
+        ensure_dir(out_dir)
 
-    if not os.path.exists(script):
-        flash("Misconfig AHA script missing", "danger")
-    else:
-        ok = run_script(script, "MISCONFIG AHA")
-        flash(
-            "Misconfig AHA completed" if ok else "Misconfig AHA failed",
-            "success" if ok else "danger"
+        run_script(
+            os.path.join(BASE_DIR, "MisConfig_Automation", "Misconfigp2.py"),
+            [input_file, out_dir]
         )
 
-    return redirect(url_for("index"))
+        return redirect(url_for("downloads", folder="mis_aha"))
 
+    except Exception:
+        err = traceback.format_exc()
+        log_error(err)
+        flash("Misconfig AHA split failed.")
+        return redirect(url_for("index"))
 
-@app.route("/run/misconfig/master", methods=["POST"])
-def run_misconfig_master():
-    script = os.path.join(BASE_DIR, "MisConfig_Automation", "automate_master_report.py")
+@app.route("/run/mis/master")
+def run_mis_master():
+    try:
+        input_file = session.get("uploaded_file")
+        out_dir = os.path.join(OUTPUT_FOLDER, "mis_master")
+        ensure_dir(out_dir)
 
-    if not os.path.exists(script):
-        flash("Misconfig Master script missing", "danger")
-    else:
-        ok = run_script(script, "MISCONFIG MASTER")
-        flash(
-            "Misconfig Master completed" if ok else "Misconfig Master failed",
-            "success" if ok else "danger"
+        run_script(
+            os.path.join(BASE_DIR, "MisConfig_Automation", "automate_master_report.py"),
+            [input_file, out_dir]
         )
 
-    return redirect(url_for("index"))
+        return redirect(url_for("downloads", folder="mis_master"))
 
+    except Exception:
+        err = traceback.format_exc()
+        log_error(err)
+        flash("Misconfig Master failed.")
+        return redirect(url_for("index"))
 
-# --------------------------------------------------
-# Logs
-# --------------------------------------------------
-@app.route("/logs")
-def logs_index():
-    return render_template("logs.html")
+# ---------------- DOWNLOADS ---------------- #
 
+@app.route("/downloads/<folder>")
+def downloads(folder):
+    folder_path = os.path.join(OUTPUT_FOLDER, folder)
+    files = os.listdir(folder_path) if os.path.exists(folder_path) else []
+    return render_template("downloads.html", files=files, folder=folder)
 
-@app.route("/logs/<which>")
-def logs_view(which):
-    path = get_log_path(which)
-    if not path or not os.path.exists(path):
-        abort(404)
-    with open(path, "r", errors="ignore") as f:
-        return f"<pre>{f.read()}</pre>"
+@app.route("/download/<folder>/<filename>")
+def download_file(folder, filename):
+    return send_from_directory(
+        os.path.join(OUTPUT_FOLDER, folder),
+        filename,
+        as_attachment=True
+    )
 
+# ---------------- RUN ---------------- #
 
-@app.route("/logs/download/<which>")
-def logs_download(which):
-    path = get_log_path(which)
-    if not path or not os.path.exists(path):
-        abort(404)
-    return send_file(path, as_attachment=True)
-
-
-# --------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
