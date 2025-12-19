@@ -46,8 +46,6 @@ function pollStatus() {
                 el.innerHTML = "⏳ Vulnerability DevOps is processing…";
             } else if (data.status === "COMPLETED") {
                 el.innerHTML = "✅ Vulnerability DevOps completed";
-            } else if (data.status === "FAILED") {
-                el.innerHTML = "❌ Vulnerability DevOps failed";
             }
         });
 }
