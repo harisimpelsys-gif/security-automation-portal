@@ -8,9 +8,9 @@
 <h2>Security Automation Portal</h2>
 
 {% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <p style="color:red">{{ messages[0] }}</p>
-  {% endif %}
+  {% for msg in messages %}
+    <p style="color:red">{{ msg }}</p>
+  {% endfor %}
 {% endwith %}
 
 <form method="POST">
