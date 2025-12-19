@@ -1,5 +1,8 @@
 import os, uuid, subprocess, threading
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, flash, session, send_from_directory, jsonify
+)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOADS = os.path.join(BASE_DIR, "uploads")
@@ -82,29 +85,33 @@ def get_status(folder):
     f = os.path.join(OUTPUTS, folder, "status.txt")
     return open(f).read() if os.path.exists(f) else "NONE"
 
-# ---------------- DEVOPS ---------------- #
+# ---------------- VULNERABILITY DEVOPS ---------------- #
 
 @app.route("/run/vul/devops")
-def run_devops():
+def run_vul_devops():
     inp = session.get("uploaded_file")
     if not inp:
         flash("Upload file first")
         return redirect("/index")
 
     out = os.path.join(OUTPUTS, "vul_devops")
-    cmd = ["python", "Vul_Automation/split_vulns.py", inp, "-o", os.path.join(out, "Vul_By_App.xlsx")]
+    cmd = [
+        "python",
+        "Vul_Automation/split_vulns.py",
+        inp,
+        "-o", os.path.join(out, "Vul_By_App.xlsx")
+    ]
     run_async(cmd, out)
-    session["devops_started"] = True
     return redirect("/index")
 
 @app.route("/status/vul/devops")
-def status_devops():
+def status_vul_devops():
     return jsonify({"status": get_status("vul_devops")})
 
-# ---------------- MASTER ---------------- #
+# ---------------- VULNERABILITY MASTER ---------------- #
 
 @app.route("/run/vul/master")
-def run_master():
+def run_vul_master():
     inp = session.get("uploaded_file")
     if not inp:
         flash("Upload file first")
@@ -118,14 +125,36 @@ def run_master():
         "--output", os.path.join(out, "Master_Report_Automated.xlsx")
     ]
     run_async(cmd, out)
-    session["master_started"] = True
     return redirect("/index")
 
 @app.route("/status/vul/master")
-def status_master():
+def status_vul_master():
     return jsonify({"status": get_status("vul_master")})
 
-# ---------------- DOWNLOADS ---------------- #
+# ---------------- MISCONFIG DEVOPS ---------------- #
+
+@app.route("/run/mis/devops")
+def run_mis_devops():
+    inp = session.get("uploaded_file")
+    if not inp:
+        flash("Upload file first")
+        return redirect("/index")
+
+    out = os.path.join(OUTPUTS, "mis_devops")
+    cmd = [
+        "python",
+        "MisConfig_Automation/segregate_misconfigs.py",
+        inp,
+        os.path.join(out, "Misconfig_By_App.xlsx")
+    ]
+    run_async(cmd, out)
+    return redirect("/index")
+
+@app.route("/status/mis/devops")
+def status_mis_devops():
+    return jsonify({"status": get_status("mis_devops")})
+
+# ---------------- DOWNLOADS & LOGS ---------------- #
 
 @app.route("/downloads/<folder>")
 def downloads(folder):
