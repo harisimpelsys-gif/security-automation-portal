@@ -31,6 +31,10 @@
 </p>
 
 <p>
+    <a href="/logs/vul/devops" target="_blank">View Vulnerability DevOps Logs</a>
+</p>
+
+<p>
     <a href="/logout">Logout</a>
 </p>
 
@@ -40,19 +44,23 @@ function checkStatus() {
         .then(res => res.json())
         .then(data => {
             const el = document.getElementById("vul-status");
+
             if (data.status === "RUNNING") {
                 el.innerText = "⏳ Vulnerability DevOps is processing...";
-            } else if (data.status === "COMPLETED") {
+            } 
+            else if (data.status === "COMPLETED") {
                 el.innerText = "✅ Vulnerability DevOps completed successfully";
-            } else if (data.status === "FAILED") {
+            } 
+            else if (data.status === "FAILED") {
                 el.innerText = "❌ Vulnerability DevOps failed. Check logs.";
-            } else {
+            } 
+            else {
                 el.innerText = "";
             }
         });
 }
 
-setInterval(checkStatus, 5000);
+setInterval(checkStatus, 4000);
 checkStatus();
 </script>
 
