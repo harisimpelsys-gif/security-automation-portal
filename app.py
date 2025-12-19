@@ -32,12 +32,19 @@ app.secret_key = "security-automation-secret"
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def clear_vul_devops_state():
+    folder = os.path.join(OUTPUT_FOLDER, "vul_devops")
+    for f in ("status.txt", "run.log"):
+        p = os.path.join(folder, f)
+        if os.path.exists(p):
+            os.remove(p)
+
 # ================= AUTH =================
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    if session.get("auth"):
-        return redirect("/index")
+    # FORCE fresh login on every visit / refresh
+    session.clear()
 
     if request.method == "POST":
         if request.form.get("password") == APP_PASSWORD:
@@ -63,6 +70,9 @@ def protect():
 
 @app.route("/index")
 def index():
+    # CLEAR OLD STATE ON EVERY PAGE LOAD
+    clear_vul_devops_state()
+    session.pop("job_started", None)
     return render_template("index.html")
 
 # ================= UPLOAD =================
@@ -99,15 +109,14 @@ def run_vul_devops():
     out_dir = os.path.join(OUTPUT_FOLDER, "vul_devops")
     os.makedirs(out_dir, exist_ok=True)
 
-    output_file = os.path.join(
-        out_dir, "Vulnerabilities_By_Application.xlsx"
-    )
+    output_file = os.path.join(out_dir, "Vulnerabilities_By_Application.xlsx")
     status_file = os.path.join(out_dir, "status.txt")
     log_file = os.path.join(out_dir, "run.log")
 
-    # mark running
     with open(status_file, "w") as f:
         f.write("RUNNING")
+
+    session["job_started"] = True
 
     def task():
         result = subprocess.run(
@@ -122,14 +131,12 @@ def run_vul_devops():
             text=True
         )
 
-        # write logs always
         with open(log_file, "w") as lf:
             lf.write("STDOUT:\n")
             lf.write(result.stdout or "")
             lf.write("\n\nSTDERR:\n")
             lf.write(result.stderr or "")
 
-        # SUCCESS CRITERIA = output exists
         if os.path.exists(output_file):
             with open(status_file, "w") as f:
                 f.write("COMPLETED")
@@ -146,11 +153,13 @@ def run_vul_devops():
 
 @app.route("/status/vul/devops")
 def status_vul_devops():
-    status_file = os.path.join(
-        OUTPUT_FOLDER, "vul_devops", "status.txt"
-    )
+    if not session.get("job_started"):
+        return jsonify({"status": "NONE"})
+
+    status_file = os.path.join(OUTPUT_FOLDER, "vul_devops", "status.txt")
     if not os.path.exists(status_file):
-        return jsonify({"status": "NOT_STARTED"})
+        return jsonify({"status": "NONE"})
+
     return jsonify({"status": open(status_file).read().strip()})
 
 # ================= DOWNLOADS =================
@@ -173,9 +182,7 @@ def download_vul_file(filename):
 
 @app.route("/logs/vul/devops")
 def view_vul_logs():
-    log_path = os.path.join(
-        OUTPUT_FOLDER, "vul_devops", "run.log"
-    )
+    log_path = os.path.join(OUTPUT_FOLDER, "vul_devops", "run.log")
     if not os.path.exists(log_path):
         return "No logs available"
     return f"<pre>{open(log_path).read()}</pre>"
