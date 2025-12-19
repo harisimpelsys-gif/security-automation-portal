@@ -8,13 +8,9 @@
 <h2>Security Automation Portal</h2>
 
 {% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <div style="background:#198754;color:white;padding:10px;margin-bottom:10px">
-      {% for msg in messages %}
-        {{ msg }}<br>
-      {% endfor %}
-    </div>
-  {% endif %}
+  {% for msg in messages %}
+    <p style="color:green">{{ msg }}</p>
+  {% endfor %}
 {% endwith %}
 
 <form action="/upload" method="POST" enctype="multipart/form-data">
@@ -28,28 +24,36 @@
     Run Vulnerability DevOps
 </button>
 
-<div id="status" style="margin-top:15px;font-weight:bold;"></div>
+<div id="vul-status" style="margin-top:10px;font-weight:bold;"></div>
 
-<hr>
+<p>
+    <a href="/downloads/vul_devops">View Vulnerability Outputs</a>
+</p>
 
-<a href="/downloads/vul_devops">View Vulnerability Outputs</a><br><br>
-
-<a href="/logout">Logout</a>
+<p>
+    <a href="/logout">Logout</a>
+</p>
 
 <script>
-function pollStatus() {
+function checkStatus() {
     fetch("/status/vul/devops")
         .then(res => res.json())
         .then(data => {
-            const el = document.getElementById("status");
+            const el = document.getElementById("vul-status");
             if (data.status === "RUNNING") {
-                el.innerHTML = "⏳ Vulnerability DevOps is processing…";
+                el.innerText = "⏳ Vulnerability DevOps is processing...";
             } else if (data.status === "COMPLETED") {
-                el.innerHTML = "✅ Vulnerability DevOps completed";
+                el.innerText = "✅ Vulnerability DevOps completed successfully";
+            } else if (data.status === "FAILED") {
+                el.innerText = "❌ Vulnerability DevOps failed. Check logs.";
+            } else {
+                el.innerText = "";
             }
         });
 }
-setInterval(pollStatus, 5000);
+
+setInterval(checkStatus, 5000);
+checkStatus();
 </script>
 
 </body>
