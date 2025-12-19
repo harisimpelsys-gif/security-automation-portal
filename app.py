@@ -99,27 +99,41 @@ def run_vul_devops():
     out_dir = os.path.join(OUTPUT_FOLDER, "vul_devops")
     os.makedirs(out_dir, exist_ok=True)
 
-    output_file = os.path.join(out_dir, "Vulnerabilities_By_Application.xlsx")
+    output_file = os.path.join(
+        out_dir, "Vulnerabilities_By_Application.xlsx"
+    )
     status_file = os.path.join(out_dir, "status.txt")
+    log_file = os.path.join(out_dir, "run.log")
 
+    # mark running
     with open(status_file, "w") as f:
         f.write("RUNNING")
 
     def task():
-        try:
-            subprocess.run(
-                [
-                    "python",
-                    "Vul_Automation/split_vulns.py",
-                    input_file,
-                    "-o",
-                    output_file,
-                ],
-                check=True
-            )
+        result = subprocess.run(
+            [
+                "python",
+                "Vul_Automation/split_vulns.py",
+                input_file,
+                "-o",
+                output_file,
+            ],
+            capture_output=True,
+            text=True
+        )
+
+        # write logs always
+        with open(log_file, "w") as lf:
+            lf.write("STDOUT:\n")
+            lf.write(result.stdout or "")
+            lf.write("\n\nSTDERR:\n")
+            lf.write(result.stderr or "")
+
+        # SUCCESS CRITERIA = output exists
+        if os.path.exists(output_file):
             with open(status_file, "w") as f:
                 f.write("COMPLETED")
-        except Exception:
+        else:
             with open(status_file, "w") as f:
                 f.write("FAILED")
 
@@ -132,12 +146,14 @@ def run_vul_devops():
 
 @app.route("/status/vul/devops")
 def status_vul_devops():
-    status_file = os.path.join(OUTPUT_FOLDER, "vul_devops", "status.txt")
+    status_file = os.path.join(
+        OUTPUT_FOLDER, "vul_devops", "status.txt"
+    )
     if not os.path.exists(status_file):
         return jsonify({"status": "NOT_STARTED"})
     return jsonify({"status": open(status_file).read().strip()})
 
-# ================= DOWNLOAD =================
+# ================= DOWNLOADS =================
 
 @app.route("/downloads/vul_devops")
 def downloads_vul_devops():
@@ -152,6 +168,17 @@ def download_vul_file(filename):
         filename,
         as_attachment=True
     )
+
+# ================= LOG VIEW =================
+
+@app.route("/logs/vul/devops")
+def view_vul_logs():
+    log_path = os.path.join(
+        OUTPUT_FOLDER, "vul_devops", "run.log"
+    )
+    if not os.path.exists(log_path):
+        return "No logs available"
+    return f"<pre>{open(log_path).read()}</pre>"
 
 # ================= RUN =================
 
