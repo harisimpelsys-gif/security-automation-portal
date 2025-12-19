@@ -1,18 +1,25 @@
-import os, uuid, subprocess, threading
+import os
+import uuid
+import subprocess
+import threading
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, session, send_from_directory, jsonify
 )
+
+# ---------------- PATHS ---------------- #
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOADS = os.path.join(BASE_DIR, "uploads")
 OUTPUTS = os.path.join(BASE_DIR, "outputs")
 LOGS = os.path.join(BASE_DIR, "logs")
 
-for d in [UPLOADS, OUTPUTS, LOGS]:
+for d in (UPLOADS, OUTPUTS, LOGS):
     os.makedirs(d, exist_ok=True)
 
 APP_PASSWORD = os.getenv("APP_PASSWORD", "changeme")
+
+# ---------------- APP ---------------- #
 
 app = Flask(__name__)
 app.secret_key = "security-automation-secret"
@@ -26,7 +33,6 @@ def require_login():
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    session.clear()
     if request.method == "POST":
         if request.form.get("password") == APP_PASSWORD:
             session["auth"] = True
@@ -50,12 +56,12 @@ def index():
 @app.route("/upload", methods=["POST"])
 def upload():
     f = request.files.get("file")
-    if not f:
+    if not f or f.filename == "":
         flash("No file selected")
         return redirect("/index")
 
-    name = f"{uuid.uuid4()}_{f.filename}"
-    path = os.path.join(UPLOADS, name)
+    filename = f"{uuid.uuid4()}_{f.filename}"
+    path = os.path.join(UPLOADS, filename)
     f.save(path)
 
     session["uploaded_file"] = path
@@ -66,31 +72,33 @@ def upload():
 
 def run_async(cmd, out_dir):
     os.makedirs(out_dir, exist_ok=True)
-    status = os.path.join(out_dir, "status.txt")
-    log = os.path.join(out_dir, "run.log")
+    status_file = os.path.join(out_dir, "status.txt")
+    log_file = os.path.join(out_dir, "run.log")
 
-    with open(status, "w") as f:
+    with open(status_file, "w") as f:
         f.write("RUNNING")
 
     def task():
         p = subprocess.run(cmd, capture_output=True, text=True)
-        with open(log, "w") as l:
+        with open(log_file, "w") as l:
             l.write(p.stdout + "\n" + p.stderr)
-        with open(status, "w") as f:
-            f.write("COMPLETED" if p.returncode == 0 else "FAILED")
+        with open(status_file, "w") as s:
+            s.write("COMPLETED" if p.returncode == 0 else "FAILED")
 
     threading.Thread(target=task, daemon=True).start()
 
 def get_status(folder):
-    f = os.path.join(OUTPUTS, folder, "status.txt")
-    return open(f).read() if os.path.exists(f) else "NONE"
+    status_path = os.path.join(OUTPUTS, folder, "status.txt")
+    if os.path.exists(status_path):
+        return open(status_path).read()
+    return "NONE"
 
 # ---------------- VULNERABILITY DEVOPS ---------------- #
 
 @app.route("/run/vul/devops")
 def run_vul_devops():
     inp = session.get("uploaded_file")
-    if not inp:
+    if not inp or not os.path.exists(inp):
         flash("Upload file first")
         return redirect("/index")
 
@@ -99,7 +107,8 @@ def run_vul_devops():
         "python",
         "Vul_Automation/split_vulns.py",
         inp,
-        "-o", os.path.join(out, "Vul_By_App.xlsx")
+        "-o",
+        os.path.join(out, "Vul_By_App.xlsx")
     ]
     run_async(cmd, out)
     return redirect("/index")
@@ -113,7 +122,7 @@ def status_vul_devops():
 @app.route("/run/vul/master")
 def run_vul_master():
     inp = session.get("uploaded_file")
-    if not inp:
+    if not inp or not os.path.exists(inp):
         flash("Upload file first")
         return redirect("/index")
 
@@ -136,7 +145,7 @@ def status_vul_master():
 @app.route("/run/mis/devops")
 def run_mis_devops():
     inp = session.get("uploaded_file")
-    if not inp:
+    if not inp or not os.path.exists(inp):
         flash("Upload file first")
         return redirect("/index")
 
@@ -170,6 +179,8 @@ def download(folder, file):
 def logs(folder):
     log = os.path.join(OUTPUTS, folder, "run.log")
     return f"<pre>{open(log).read()}</pre>" if os.path.exists(log) else "No logs"
+
+# ---------------- RUN ---------------- #
 
 if __name__ == "__main__":
     app.run()
