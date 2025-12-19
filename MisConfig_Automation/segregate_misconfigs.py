@@ -88,8 +88,9 @@ def main():
 
     xls = pd.ExcelFile(in_path)
     if args.sheet not in xls.sheet_names:
-        print(f"ERROR: sheet '{args.sheet}' not found. Available sheets:", xls.sheet_names)
-        return 3
+    raise RuntimeError(
+        f"Sheet '{args.sheet}' not found. Available: {xls.sheet_names}"
+    )
 
     df = pd.read_excel(xls, sheet_name=args.sheet, dtype=str)
     df.fillna("", inplace=True)
