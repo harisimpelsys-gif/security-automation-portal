@@ -28,16 +28,31 @@
     Run Vulnerability DevOps
 </button>
 
-<button onclick="location.href='/run/mis/devops'">
-    Run Misconfig DevOps
-</button>
+<div id="status" style="margin-top:15px;font-weight:bold;"></div>
 
 <hr>
 
-<a href="/downloads/vul_devops">View Vulnerability Outputs</a><br>
-<a href="/downloads/mis_devops">View Misconfig Outputs</a><br><br>
+<a href="/downloads/vul_devops">View Vulnerability Outputs</a><br><br>
 
 <a href="/logout">Logout</a>
+
+<script>
+function pollStatus() {
+    fetch("/status/vul/devops")
+        .then(res => res.json())
+        .then(data => {
+            const el = document.getElementById("status");
+            if (data.status === "RUNNING") {
+                el.innerHTML = "⏳ Vulnerability DevOps is processing…";
+            } else if (data.status === "COMPLETED") {
+                el.innerHTML = "✅ Vulnerability DevOps completed";
+            } else if (data.status === "FAILED") {
+                el.innerHTML = "❌ Vulnerability DevOps failed";
+            }
+        });
+}
+setInterval(pollStatus, 5000);
+</script>
 
 </body>
 </html>
