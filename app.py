@@ -71,10 +71,8 @@ def protect():
 
 @app.route("/index")
 def index():
-    # CLEAR OLD STATE ON EVERY PAGE LOAD
-    clear_vul_devops_state()
-    session.pop("job_started", None)
     return render_template("index.html")
+
 
 # ================= UPLOAD =================
 
