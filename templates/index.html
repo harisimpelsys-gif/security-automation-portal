@@ -1,67 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Security Automation Portal</title>
+  <meta charset="UTF-8">
+  <title>Security Automation Portal</title>
+  <style>
+    body {
+      background: #020617;
+      color: #e5e7eb;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    h2 { margin-bottom: 10px; }
+    hr { margin: 25px 0; border: 1px solid #1f2933; }
+    button {
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #22c55e;
+      font-weight: bold;
+    }
+    .section {
+      background: #020617;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      margin-bottom: 25px;
+    }
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    a {
+      color: #38bdf8;
+      text-decoration: none;
+      margin-right: 15px;
+    }
+    .flash {
+      color: #22c55e;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
 
 <h2>Security Automation Portal</h2>
 
 {% with messages = get_flashed_messages() %}
-  {% for msg in messages %}
-    <p style="color:green">{{ msg }}</p>
-  {% endfor %}
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="flash">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
 {% endwith %}
 
-<form action="/upload" method="POST" enctype="multipart/form-data">
+<div class="section">
+  <h3>1. Upload Base Excel</h3>
+  <form action="/upload" method="POST" enctype="multipart/form-data">
     <input type="file" name="file" required>
     <button type="submit">Upload</button>
-</form>
+  </form>
+</div>
+
+<div class="section">
+  <h3>2. Vulnerability – DevOps Segregation</h3>
+  <button onclick="location.href='/run/vul/devops'">Run DevOps Segregation</button>
+  <div class="status" id="devops-status"></div>
+  <br>
+  <a href="/downloads/vul_devops">View Outputs</a>
+  <a href="/logs/vul_devops">View Logs</a>
+</div>
+
+<div class="section">
+  <h3>3. Vulnerability – Master Report</h3>
+  <button onclick="location.href='/run/vul/master'">Run Master Vulnerability Report</button>
+  <div class="status" id="master-status"></div>
+  <br>
+  <a href="/downloads/vul_master">View Outputs</a>
+  <a href="/logs/vul_master">View Logs</a>
+</div>
 
 <hr>
-
-<button onclick="location.href='/run/vul/devops'">
-    Run Vulnerability DevOps
-</button>
-
-<div id="vul-status" style="margin-top:10px;font-weight:bold;"></div>
-
-<p>
-    <a href="/downloads/vul_devops">View Vulnerability Outputs</a>
-</p>
-
-<p>
-    <a href="/logs/vul/devops" target="_blank">View Vulnerability DevOps Logs</a>
-</p>
-
-<p>
-    <a href="/logout">Logout</a>
-</p>
+<a href="/logout">Logout</a>
 
 <script>
-function checkStatus() {
-    fetch("/status/vul/devops")
-        .then(res => res.json())
-        .then(data => {
-            const el = document.getElementById("vul-status");
-
-            if (data.status === "RUNNING") {
-                el.innerText = "⏳ Vulnerability DevOps is processing...";
-            } 
-            else if (data.status === "COMPLETED") {
-                el.innerText = "✅ Vulnerability DevOps completed successfully";
-            } 
-            else if (data.status === "FAILED") {
-                el.innerText = "❌ Vulnerability DevOps failed. Check logs.";
-            } 
-            else {
-                el.innerText = "";
-            }
-        });
+function pollStatus(elementId, url) {
+  fetch(url)
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById(elementId);
+      if (d.status === "RUNNING") el.innerText = "⏳ Processing…";
+      else if (d.status === "COMPLETED") el.innerText = "✅ Completed";
+      else if (d.status === "FAILED") el.innerText = "❌ Failed (check logs)";
+      else el.innerText = "";
+    });
 }
 
-setInterval(checkStatus, 4000);
-checkStatus();
+setInterval(() => pollStatus("devops-status", "/status/vul/devops"), 3000);
+setInterval(() => pollStatus("master-status", "/status/vul/master"), 3000);
 </script>
 
 </body>
