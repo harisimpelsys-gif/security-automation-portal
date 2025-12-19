@@ -43,7 +43,8 @@ def clear_vul_devops_state():
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    # FORCE fresh login on every visit / refresh
+    # clear previous execution state ONLY on fresh login
+    clear_vul_devops_state()
     session.clear()
 
     if request.method == "POST":
