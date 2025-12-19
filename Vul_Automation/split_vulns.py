@@ -163,3 +163,8 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+# mark completed for UI
+out_dir = pathlib.Path(args.output).parent
+with open(out_dir / "status.txt", "w") as f:
+    f.write("COMPLETED")
+
