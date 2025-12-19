@@ -65,7 +65,7 @@
 <div class="section">
   <h3>2. Vulnerability – DevOps Segregation</h3>
   <button onclick="location.href='/run/vul/devops'">Run DevOps Segregation</button>
-  <div class="status" id="devops-status"></div>
+  <div class="status" id="vul-devops-status"></div>
   <br>
   <a href="/downloads/vul_devops">View Outputs</a>
   <a href="/logs/vul_devops">View Logs</a>
@@ -74,10 +74,19 @@
 <div class="section">
   <h3>3. Vulnerability – Master Report</h3>
   <button onclick="location.href='/run/vul/master'">Run Master Vulnerability Report</button>
-  <div class="status" id="master-status"></div>
+  <div class="status" id="vul-master-status"></div>
   <br>
   <a href="/downloads/vul_master">View Outputs</a>
   <a href="/logs/vul_master">View Logs</a>
+</div>
+
+<div class="section">
+  <h3>4. Misconfiguration – DevOps Segregation</h3>
+  <button onclick="location.href='/run/mis/devops'">Run Misconfiguration DevOps</button>
+  <div class="status" id="mis-devops-status"></div>
+  <br>
+  <a href="/downloads/mis_devops">View Outputs</a>
+  <a href="/logs/mis_devops">View Logs</a>
 </div>
 
 <hr>
@@ -89,6 +98,7 @@ function pollStatus(elementId, url) {
     .then(r => r.json())
     .then(d => {
       const el = document.getElementById(elementId);
+      if (!el) return;
       if (d.status === "RUNNING") el.innerText = "⏳ Processing…";
       else if (d.status === "COMPLETED") el.innerText = "✅ Completed";
       else if (d.status === "FAILED") el.innerText = "❌ Failed (check logs)";
@@ -96,8 +106,9 @@ function pollStatus(elementId, url) {
     });
 }
 
-setInterval(() => pollStatus("devops-status", "/status/vul/devops"), 3000);
-setInterval(() => pollStatus("master-status", "/status/vul/master"), 3000);
+setInterval(() => pollStatus("vul-devops-status", "/status/vul/devops"), 3000);
+setInterval(() => pollStatus("vul-master-status", "/status/vul/master"), 3000);
+setInterval(() => pollStatus("mis-devops-status", "/status/mis/devops"), 3000);
 </script>
 
 </body>
