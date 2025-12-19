@@ -1,58 +1,34 @@
-import os
-import uuid
-import subprocess
-import threading
-from flask import (
-    Flask, render_template, request,
-    redirect, flash, session, jsonify,
-    send_from_directory
-)
-from werkzeug.utils import secure_filename
-
-# ================= CONFIG =================
+import os, uuid, subprocess, threading
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOADS = os.path.join(BASE_DIR, "uploads")
+OUTPUTS = os.path.join(BASE_DIR, "outputs")
+LOGS = os.path.join(BASE_DIR, "logs")
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-OUTPUT_FOLDER = os.path.join(BASE_DIR, "outputs")
+for d in [UPLOADS, OUTPUTS, LOGS]:
+    os.makedirs(d, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {"xlsx", "csv"}
 APP_PASSWORD = os.getenv("APP_PASSWORD", "changeme")
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-# ================= APP =================
 
 app = Flask(__name__)
 app.secret_key = "security-automation-secret"
 
-# ================= HELPERS =================
+# ---------------- AUTH ---------------- #
 
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def clear_vul_devops_state():
-    folder = os.path.join(OUTPUT_FOLDER, "vul_devops")
-    for f in ("status.txt", "run.log"):
-        p = os.path.join(folder, f)
-        if os.path.exists(p):
-            os.remove(p)
-
-# ================= AUTH =================
+@app.before_request
+def require_login():
+    if request.endpoint not in ("login", "static") and not session.get("auth"):
+        return redirect("/")
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    # clear previous execution state ONLY on fresh login
-    clear_vul_devops_state()
     session.clear()
-
     if request.method == "POST":
         if request.form.get("password") == APP_PASSWORD:
             session["auth"] = True
             return redirect("/index")
         flash("Invalid password")
-
     return render_template("login.html")
 
 @app.route("/logout")
@@ -60,133 +36,111 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.before_request
-def protect():
-    if request.endpoint in ("login", "logout", "static"):
-        return
-    if not session.get("auth"):
-        return redirect("/")
-
-# ================= DASHBOARD =================
+# ---------------- DASHBOARD ---------------- #
 
 @app.route("/index")
 def index():
     return render_template("index.html")
 
-
-# ================= UPLOAD =================
+# ---------------- UPLOAD ---------------- #
 
 @app.route("/upload", methods=["POST"])
 def upload():
     f = request.files.get("file")
-
-    if not f or f.filename == "":
+    if not f:
         flash("No file selected")
         return redirect("/index")
 
-    if not allowed_file(f.filename):
-        flash("Only xlsx or csv allowed")
-        return redirect("/index")
-
-    filename = f"{uuid.uuid4()}_{secure_filename(f.filename)}"
-    path = os.path.join(UPLOAD_FOLDER, filename)
+    name = f"{uuid.uuid4()}_{f.filename}"
+    path = os.path.join(UPLOADS, name)
     f.save(path)
 
     session["uploaded_file"] = path
     flash("File uploaded successfully")
     return redirect("/index")
 
-# ================= VULNERABILITY DEVOPS =================
+# ---------------- HELPERS ---------------- #
 
-@app.route("/run/vul/devops")
-def run_vul_devops():
-    input_file = session.get("uploaded_file")
-    if not input_file:
-        flash("Upload a file first")
-        return redirect("/index")
-
-    out_dir = os.path.join(OUTPUT_FOLDER, "vul_devops")
+def run_async(cmd, out_dir):
     os.makedirs(out_dir, exist_ok=True)
+    status = os.path.join(out_dir, "status.txt")
+    log = os.path.join(out_dir, "run.log")
 
-    output_file = os.path.join(out_dir, "Vulnerabilities_By_Application.xlsx")
-    status_file = os.path.join(out_dir, "status.txt")
-    log_file = os.path.join(out_dir, "run.log")
-
-    with open(status_file, "w") as f:
+    with open(status, "w") as f:
         f.write("RUNNING")
 
-    session["job_started"] = True
-
     def task():
-        result = subprocess.run(
-            [
-                "python",
-                "Vul_Automation/split_vulns.py",
-                input_file,
-                "-o",
-                output_file,
-            ],
-            capture_output=True,
-            text=True
-        )
-
-        with open(log_file, "w") as lf:
-            lf.write("STDOUT:\n")
-            lf.write(result.stdout or "")
-            lf.write("\n\nSTDERR:\n")
-            lf.write(result.stderr or "")
-
-        if os.path.exists(output_file):
-            with open(status_file, "w") as f:
-                f.write("COMPLETED")
-        else:
-            with open(status_file, "w") as f:
-                f.write("FAILED")
+        p = subprocess.run(cmd, capture_output=True, text=True)
+        with open(log, "w") as l:
+            l.write(p.stdout + "\n" + p.stderr)
+        with open(status, "w") as f:
+            f.write("COMPLETED" if p.returncode == 0 else "FAILED")
 
     threading.Thread(target=task, daemon=True).start()
 
-    flash("Vulnerability DevOps started")
+def get_status(folder):
+    f = os.path.join(OUTPUTS, folder, "status.txt")
+    return open(f).read() if os.path.exists(f) else "NONE"
+
+# ---------------- DEVOPS ---------------- #
+
+@app.route("/run/vul/devops")
+def run_devops():
+    inp = session.get("uploaded_file")
+    if not inp:
+        flash("Upload file first")
+        return redirect("/index")
+
+    out = os.path.join(OUTPUTS, "vul_devops")
+    cmd = ["python", "Vul_Automation/split_vulns.py", inp, "-o", os.path.join(out, "Vul_By_App.xlsx")]
+    run_async(cmd, out)
+    session["devops_started"] = True
     return redirect("/index")
 
-# ================= STATUS =================
-
 @app.route("/status/vul/devops")
-def status_vul_devops():
-    if not session.get("job_started"):
-        return jsonify({"status": "NONE"})
+def status_devops():
+    return jsonify({"status": get_status("vul_devops")})
 
-    status_file = os.path.join(OUTPUT_FOLDER, "vul_devops", "status.txt")
-    if not os.path.exists(status_file):
-        return jsonify({"status": "NONE"})
+# ---------------- MASTER ---------------- #
 
-    return jsonify({"status": open(status_file).read().strip()})
+@app.route("/run/vul/master")
+def run_master():
+    inp = session.get("uploaded_file")
+    if not inp:
+        flash("Upload file first")
+        return redirect("/index")
 
-# ================= DOWNLOADS =================
+    out = os.path.join(OUTPUTS, "vul_master")
+    cmd = [
+        "python",
+        "Vul_Automation/automate_master_report.py",
+        "--input", inp,
+        "--output", os.path.join(out, "Master_Report_Automated.xlsx")
+    ]
+    run_async(cmd, out)
+    session["master_started"] = True
+    return redirect("/index")
 
-@app.route("/downloads/vul_devops")
-def downloads_vul_devops():
-    folder = os.path.join(OUTPUT_FOLDER, "vul_devops")
-    files = os.listdir(folder) if os.path.exists(folder) else []
-    return render_template("downloads.html", files=files)
+@app.route("/status/vul/master")
+def status_master():
+    return jsonify({"status": get_status("vul_master")})
 
-@app.route("/download/vul_devops/<filename>")
-def download_vul_file(filename):
-    return send_from_directory(
-        os.path.join(OUTPUT_FOLDER, "vul_devops"),
-        filename,
-        as_attachment=True
-    )
+# ---------------- DOWNLOADS ---------------- #
 
-# ================= LOG VIEW =================
+@app.route("/downloads/<folder>")
+def downloads(folder):
+    path = os.path.join(OUTPUTS, folder)
+    files = os.listdir(path) if os.path.exists(path) else []
+    return render_template("downloads.html", files=files, folder=folder)
 
-@app.route("/logs/vul/devops")
-def view_vul_logs():
-    log_path = os.path.join(OUTPUT_FOLDER, "vul_devops", "run.log")
-    if not os.path.exists(log_path):
-        return "No logs available"
-    return f"<pre>{open(log_path).read()}</pre>"
+@app.route("/download/<folder>/<file>")
+def download(folder, file):
+    return send_from_directory(os.path.join(OUTPUTS, folder), file, as_attachment=True)
 
-# ================= RUN =================
+@app.route("/logs/<folder>")
+def logs(folder):
+    log = os.path.join(OUTPUTS, folder, "run.log")
+    return f"<pre>{open(log).read()}</pre>" if os.path.exists(log) else "No logs"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
