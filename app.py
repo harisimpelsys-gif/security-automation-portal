@@ -151,10 +151,11 @@ def run_mis_devops():
 
     out = os.path.join(OUTPUTS, "mis_devops")
     cmd = [
-        "python",
-        "MisConfig_Automation/segregate_misconfigs.py",
-        inp,
-        os.path.join(out, "Misconfig_By_App.xlsx")
+    "python",
+    "MisConfig_Automation/segregate_misconfigs.py",
+    inp,
+    os.path.join(out, "Misconfig_By_App.xlsx"),
+    "--sheet", "Misconfigurations"
     ]
     run_async(cmd, out)
     return redirect("/index")
