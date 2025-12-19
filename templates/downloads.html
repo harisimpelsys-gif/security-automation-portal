@@ -1,21 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Downloads</title>
+  <meta charset="UTF-8">
+  <title>Outputs</title>
+  <style>
+    body {
+      background: #020617;
+      color: #e5e7eb;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    ul { list-style: none; padding: 0; }
+    li {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+    }
+    a {
+      color: #22c55e;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
 
-<h2>Vulnerability Outputs</h2>
+<h2>Generated Outputs</h2>
 
+{% if files %}
 <ul>
-{% for f in files %}
+  {% for file in files %}
     <li>
-        <a href="/download/vul_devops/{{ f }}">{{ f }}</a>
+      <a href="/download/{{ folder }}/{{ file }}">{{ file }}</a>
     </li>
-{% endfor %}
+  {% endfor %}
 </ul>
+{% else %}
+<p>No outputs found.</p>
+{% endif %}
 
-<a href="/index">Back</a>
+<br>
+<a href="/index">⬅ Back to Dashboard</a>
 
 </body>
 </html>
