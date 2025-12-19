@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Downloads</title>
+</head>
+<body>
+
+<h2>Generated Files – {{ folder }}</h2>
+
+{% if files %}
+<ul>
+{% for f in files %}
+    <li><a href="/download/{{ folder }}/{{ f }}">{{ f }}</a></li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No files yet. Processing in progress…</p>
+{% endif %}
+
+<br>
+<a href="/index">Back to Dashboard</a>
+
+</body>
+</html>
