@@ -11,7 +11,7 @@
       padding: 30px;
     }
     h2 { margin-bottom: 10px; }
-    hr { margin: 25px 0; border: 1px solid #1f2933; }
+    hr { margin: 30px 0; border: 1px solid #1f2937; }
     button {
       padding: 10px 18px;
       border-radius: 6px;
@@ -93,16 +93,15 @@
 <a href="/logout">Logout</a>
 
 <script>
-function pollStatus(elementId, url) {
+function pollStatus(el, url) {
   fetch(url)
     .then(r => r.json())
     .then(d => {
-      const el = document.getElementById(elementId);
-      if (!el) return;
-      if (d.status === "RUNNING") el.innerText = "⏳ Processing…";
-      else if (d.status === "COMPLETED") el.innerText = "✅ Completed";
-      else if (d.status === "FAILED") el.innerText = "❌ Failed (check logs)";
-      else el.innerText = "";
+      const e = document.getElementById(el);
+      if (d.status === "RUNNING") e.innerText = "⏳ Processing…";
+      else if (d.status === "COMPLETED") e.innerText = "✅ Completed";
+      else if (d.status === "FAILED") e.innerText = "❌ Failed (check logs)";
+      else e.innerText = "";
     });
 }
 
