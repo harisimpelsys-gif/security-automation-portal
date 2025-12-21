@@ -384,24 +384,25 @@ def main():
     for rf in rule_files:
         print("  -", rf)
 
-    print("\n....Data Analysing...")
-    print("#################################################################################")
-    print("\n...checking the rules..")
-    print("#################################################################################")
-    print("\n...Optimization in place...")
-    print("#################################################################################")
     print("\nLoading training rules...")
-    print("#################################################################################")
     train = build_training_index(rule_files)
     print(f"Loaded {len(train)} labeled rules.")
 
     if HAS_RAPIDFUZZ:
         print("rapidfuzz available: using fuzzy token matching")
     else:
-        print("rapidfuzz NOT installed: using simpler token overlap (install rapidfuzz for better matches)")
+        print("rapidfuzz NOT installed: using simpler token overlap")
 
-    classify_report(report_path, train, Path(args.output), fuzzy_threshold=args.threshold)
+    classify_report(
+        report_path,
+        train,
+        Path(args.output),
+        fuzzy_threshold=args.threshold
+    )
+
+    return 0   # ✅ CRITICAL
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    sys.exit(main())
