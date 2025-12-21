@@ -62,23 +62,33 @@ def upload():
 
 def run_async(cmd, out_dir):
     os.makedirs(out_dir, exist_ok=True)
-    status_file = os.path.join(out_dir, "status.txt")
-    log_file = os.path.join(out_dir, "run.log")
+    status = os.path.join(out_dir, "status.txt")
+    log = os.path.join(out_dir, "run.log")
 
-    with open(status_file, "w") as f:
+    with open(status, "w") as f:
         f.write("RUNNING")
 
     def task():
         try:
             p = subprocess.run(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
-                cwd=BASE_DIR
+                timeout=900  # 15 min hard stop
             )
-            with open(log_file, "w") as l:
+            with open(log, "w") as l:
                 l.write(p.stdout + "\n" + p.stderr)
+
+            with open(status, "w") as f:
+                f.write("COMPLETED" if p.returncode == 0 else "FAILED")
+
+        except Exception as e:
+            with open(log, "w") as l:
+                l.write(str(e))
+            with open(status, "w") as f:
+                f.write("FAILED")
+
+    threading.Thread(target=task, daemon=True).start()
 
             # ✅ SUCCESS IF FILE EXISTS
             produced = []
@@ -107,23 +117,24 @@ def get_status(folder):
 @app.route("/run/mis/devops")
 def run_mis_devops():
     inp = session.get("uploaded_file")
-    if not inp or not os.path.exists(inp):
+    if not inp:
         flash("Upload file first")
         return redirect("/index")
 
     out = os.path.join(OUTPUTS, "mis_devops")
+    os.makedirs(out, exist_ok=True)
+
+    output_file = os.path.join(out, "Misconfig_By_App.xlsx")
+
     cmd = [
         "python",
-        os.path.join("MisConfig_Automation", "segregate_misconfigs.py"),
+        "MisConfig_Automation/segregate_misconfigs.py",
         inp,
-        os.path.join(out, "Misconfig_By_App.xlsx"),
+        output_file
     ]
+
     run_async(cmd, out)
     return redirect("/index")
-
-@app.route("/status/mis/devops")
-def status_mis_devops():
-    return jsonify({"status": get_status("mis_devops")})
 
 # ---------------- DOWNLOADS / LOGS ---------------- #
 
