@@ -62,33 +62,42 @@ def upload():
 
 def run_async(cmd, out_dir):
     os.makedirs(out_dir, exist_ok=True)
-    status = os.path.join(out_dir, "status.txt")
-    log = os.path.join(out_dir, "run.log")
+    status_file = os.path.join(out_dir, "status.txt")
+    log_file = os.path.join(out_dir, "run.log")
 
-    with open(status, "w") as f:
+    with open(status_file, "w") as f:
         f.write("RUNNING")
 
     def task():
         try:
             p = subprocess.run(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=900  # 15 min hard stop
+                timeout=1800  # 30 min hard stop
             )
-            with open(log, "w") as l:
-                l.write(p.stdout + "\n" + p.stderr)
 
-            with open(status, "w") as f:
-                f.write("COMPLETED" if p.returncode == 0 else "FAILED")
+            with open(log_file, "w") as l:
+                l.write(p.stdout)
+                l.write("\n--- STDERR ---\n")
+                l.write(p.stderr)
+
+            if p.returncode == 0:
+                with open(status_file, "w") as f:
+                    f.write("COMPLETED")
+            else:
+                with open(status_file, "w") as f:
+                    f.write("FAILED")
 
         except Exception as e:
-            with open(log, "w") as l:
-                l.write(str(e))
-            with open(status, "w") as f:
+            with open(log_file, "a") as l:
+                l.write(f"\nFATAL ERROR: {e}\n")
+            with open(status_file, "w") as f:
                 f.write("FAILED")
 
     threading.Thread(target=task, daemon=True).start()
+
 
             # ✅ SUCCESS IF FILE EXISTS
             produced = []
