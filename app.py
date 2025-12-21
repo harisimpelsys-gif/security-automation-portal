@@ -81,7 +81,12 @@ def run_async(cmd, out_dir):
                 l.write(p.stdout + "\n" + p.stderr)
 
             # ✅ SUCCESS IF FILE EXISTS
-            produced = [f for f in os.listdir(out_dir) if f.endswith(".xlsx")]
+            produced = []
+            if os.path.exists(out_dir):
+                produced = [
+                    f for f in os.listdir(out_dir)
+                    if f.lower().endswith(".xlsx") and os.path.getsize(os.path.join(out_dir, f)) > 0
+                ]
             with open(status_file, "w") as f:
                 f.write("COMPLETED" if produced else "FAILED")
 
