@@ -9,6 +9,9 @@ import sys, re, csv, argparse
 from pathlib import Path
 import pandas as pd
 
+pd.set_option("mode.copy_on_write", True)
+
+
 # ================= CANONICAL APPS ================= #
 
 CANONICAL_APPS = [
