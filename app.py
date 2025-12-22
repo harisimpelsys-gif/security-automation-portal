@@ -46,14 +46,19 @@ def index():
 def upload():
     f = request.files.get("file")
     if not f:
+        flash("No file selected")
         return redirect("/index")
 
     name = f"{uuid.uuid4()}_{f.filename}"
     path = os.path.join(UPLOADS, name)
     f.save(path)
 
+    print("UPLOADED FILE:", path)  # ✅ DEBUG
     session["uploaded_file"] = path
+
+    flash("File uploaded successfully")
     return redirect("/index")
+
 
 # ---------------- ASYNC RUNNER ---------------- #
 
@@ -99,14 +104,17 @@ def run_async(cmd, out_dir, timeout=900):
     threading.Thread(target=task, daemon=True).start()
 
 # ---------------- MISCONFIG DEVOPS ---------------- #
-
 @app.route("/run/mis/devops")
 def run_mis_devops():
     inp = session.get("uploaded_file")
-    if not inp:
+
+    if not inp or not os.path.exists(inp):
+        flash("Upload file first (session lost). Please re-upload.")
         return redirect("/index")
 
     out = os.path.join(OUTPUTS, "mis_devops")
+    os.makedirs(out, exist_ok=True)
+
     cmd = [
         "python",
         "MisConfig_Automation/segregate_misconfigs.py",
@@ -116,10 +124,6 @@ def run_mis_devops():
 
     run_async(cmd, out)
     return redirect("/index")
-
-@app.route("/status/mis/devops")
-def status_mis_devops():
-    return jsonify({"status": get_status("mis_devops")})
 
 # ---------------- DOWNLOADS ---------------- #
 
