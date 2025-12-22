@@ -57,32 +57,46 @@ def upload():
 
 # ---------------- ASYNC RUNNER ---------------- #
 
-def run_async(cmd, out_dir):
+def run_async(cmd, out_dir, timeout=900):
     os.makedirs(out_dir, exist_ok=True)
-    status = os.path.join(out_dir, "status.txt")
-    log = os.path.join(out_dir, "run.log")
+    status_file = os.path.join(out_dir, "status.txt")
+    log_file = os.path.join(out_dir, "run.log")
 
-    with open(status, "w") as f:
+    with open(status_file, "w") as f:
         f.write("RUNNING")
 
     def task():
+        start = time.time()
         try:
-            p = subprocess.run(cmd, capture_output=True, text=True)
-            with open(log, "w") as l:
-                l.write(p.stdout + "\n" + p.stderr)
-            with open(status, "w") as f:
-                f.write("COMPLETED" if p.returncode == 0 else "FAILED")
+            with open(log_file, "w") as log:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=log,
+                    stderr=log,
+                    preexec_fn=os.setsid  # important: detach from gunicorn
+                )
+
+                while True:
+                    if proc.poll() is not None:
+                        break
+
+                    if time.time() - start > timeout:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                        raise TimeoutError("Process exceeded time limit")
+
+                    time.sleep(2)
+
+            rc = proc.returncode
+            with open(status_file, "w") as f:
+                f.write("COMPLETED" if rc == 0 else "FAILED")
+
         except Exception as e:
-            with open(log, "w") as l:
-                l.write(str(e))
-            with open(status, "w") as f:
+            with open(log_file, "a") as log:
+                log.write(f"\nFATAL ERROR: {e}\n")
+            with open(status_file, "w") as f:
                 f.write("FAILED")
 
     threading.Thread(target=task, daemon=True).start()
-
-def get_status(folder):
-    f = os.path.join(OUTPUTS, folder, "status.txt")
-    return open(f).read() if os.path.exists(f) else "NONE"
 
 # ---------------- MISCONFIG DEVOPS ---------------- #
 
