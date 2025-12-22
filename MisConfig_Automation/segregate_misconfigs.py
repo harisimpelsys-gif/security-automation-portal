@@ -19,16 +19,16 @@ CANONICAL_APPS = [
 ]
 
 def norm(s):
-    return re.sub(r"\s+", " ", str(s).strip()).lower()
+    return re.sub(r"\s+", " ", str(s or "").strip()).lower()
 
 CANON_MAP = {norm(a): a for a in CANONICAL_APPS}
 
 def detect_app_column(df):
     patterns = [
-        r"application\s*name",
-        r"\bapplication\b",
-        r"\bapp\b",
-        r"\bservice\s*name\b"
+        r"application",
+        r"app\s*name",
+        r"account",
+        r"service"
     ]
     for c in df.columns:
         for p in patterns:
@@ -48,41 +48,42 @@ def main():
 
     if not in_path.exists():
         print("ERROR: input file not found:", in_path)
-        return 1
+        return 2
 
     xls = pd.ExcelFile(in_path)
     sheet = args.sheet or xls.sheet_names[0]
 
-    df = pd.read_excel(xls, sheet_name=sheet, dtype=str).fillna("")
+    df = pd.read_excel(xls, sheet_name=sheet, dtype=str)
+    df.fillna("", inplace=True)
 
     if df.empty:
-        print("ERROR: input sheet is empty")
-        return 2
+        raise RuntimeError("Input sheet is empty")
 
     app_col = detect_app_column(df)
     if not app_col:
-        print("ERROR: Could not detect Application column")
-        df.to_excel(out_path, index=False)
-        return 3
+        raise RuntimeError(f"Application column not found. Columns: {list(df.columns)}")
 
-    df["_MappedApp"] = df[app_col].apply(lambda x: CANON_MAP.get(norm(x), ""))
+    print("Using application column:", app_col)
+
+    df["_MappedApp"] = df[app_col].map(lambda x: CANON_MAP.get(norm(x), ""))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    written = 0
+    wrote_any = False
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         for app in CANONICAL_APPS:
-            sub = df[df["_MappedApp"] == app].drop(columns="_MappedApp")
+            sub = df[df["_MappedApp"] == app].drop(columns=["_MappedApp"])
             if not sub.empty:
                 sub.to_excel(writer, sheet_name=app[:31], index=False)
-                written += len(sub)
+                wrote_any = True
 
-        unmatched = df[df["_MappedApp"] == ""].drop(columns="_MappedApp")
+        unmatched = df[df["_MappedApp"] == ""].drop(columns=["_MappedApp"])
         if not unmatched.empty:
             unmatched.to_excel(writer, sheet_name="Unmatched", index=False)
+            wrote_any = True
 
-    if written == 0:
-        print("WARNING: No rows matched canonical apps")
+    if not wrote_any:
+        raise RuntimeError("No rows matched any application. Output would be empty.")
 
     print("DONE:", out_path)
     return 0
