@@ -1,14 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <title>Security Automation Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-  />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
@@ -20,537 +16,103 @@
       --text-main: #e5e7eb;
       --text-muted: #9ca3af;
     }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; font-family:system-ui, -apple-system, "Segoe UI", sans-serif; background:#000; color:var(--text-main); overflow-x:hidden; }
 
-    * {
-      box-sizing: border-box;
-    }
+    /* Landing intro */
+    #landing-overlay { position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; background:#000; }
+    #landing-video{ width:100%; height:100%; object-fit:cover; }
+    .landing-fade { animation: landingFadeOut 1s ease-in-out forwards; }
+    @keyframes landingFadeOut { from{opacity:1} to{opacity:0; visibility:hidden;} }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-      background: #000;
-      color: var(--text-main);
-      overflow-x: hidden;
-    }
+    /* Portal background */
+    #portal-bg-video { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; filter:brightness(0.35); z-index:-10; }
 
-    /* LANDING INTRO VIDEO (2 seconds) */
-    #landing-overlay {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+    .main-content{ position:relative; z-index:10; }
+    .page-wrapper{ max-width:1200px; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
 
-    #landing-video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+    /* header */
+    .app-header{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:1rem; }
+    .app-title{ font-size:2rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .header-tag{ font-size:.85rem; text-transform:uppercase; letter-spacing:.14em; border-radius:999px; border:1px solid rgba(148,163,184,.7); padding:.35rem 1rem; color:#cbd5f5; background:rgba(15,23,42,.85); }
 
-    .landing-fade {
-      animation: landingFadeOut 1s ease-in-out forwards;
-    }
+    /* layout */
+    .main-shell{ display:flex; gap:1.5rem; flex-wrap:wrap; }
+    .nav-side{ flex:0 0 230px; max-width:230px; }
+    .pages-shell{ flex:1 1 0; min-width:0; }
 
-    @keyframes landingFadeOut {
-      from {
-        opacity: 1;
-      }
-      to {
-        opacity: 0;
-        visibility: hidden;
-      }
-    }
+    @media (max-width:900px){ .main-shell{ flex-direction:column } .nav-side{ max-width:100%; flex:1 1 auto } }
 
-    /* PORTAL BACKGROUND VIDEO */
-    #portal-bg-video {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: brightness(0.35);
-      z-index: -10;
-    }
+    .step-nav{ background:rgba(15,23,42,.96); border-radius:18px; border:1px solid rgba(148,163,184,.25); padding:1rem .9rem; box-shadow:0 24px 50px rgba(0,0,0,.8); }
+    .step-item{ display:flex; align-items:center; gap:.6rem; padding:.55rem .6rem; border-radius:12px; cursor:pointer; transition:all .12s; margin-bottom:.25rem; }
+    .step-item:hover{ background:rgba(255,255,255,0.03); transform:translateX(2px); }
+    .step-item.active{ background:linear-gradient(120deg, rgba(34,197,94,.22), rgba(56,189,248,.22)); box-shadow:0 0 0 1px rgba(34,197,94,.6); transform:translateX(3px); }
+    .step-index{ width:32px; height:32px; border-radius:999px; border:1px solid rgba(148,163,184,.7); display:flex; align-items:center; justify-content:center; font-size:.9rem; }
+    .step-label-title{ font-size:.95rem; font-weight:600; }
+    .step-label-sub{ font-size:.8rem; color:var(--text-muted); }
 
-    .main-content {
-      position: relative;
-      z-index: 10;
-    }
+    .page-card{ background:rgba(15,23,42,.96); border-radius:22px; border:1px solid rgba(148,163,184,.3); padding:1.6rem; min-height:460px; position:relative; overflow:hidden; box-shadow:0 26px 60px rgba(0,0,0,.85); }
+    .page{ display:none; animation:pageFlip .3s ease-out; }
+    .page.active{ display:block; }
+    @keyframes pageFlip{ 0%{opacity:0; transform:translateX(10px) rotateY(5deg)} 100%{opacity:1; transform:translateX(0) rotateY(0)} }
 
-    .page-wrapper {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1.5rem 1.25rem 3rem;
-    }
+    .sub-card{ background:#020617; border-radius:16px; border:1px solid rgba(51,65,85,.95); padding:1rem 1.1rem 1.2rem; margin-bottom:.9rem; }
+    .sub-card-title{ font-size:1rem; font-weight:600; margin-bottom:.35rem; }
+    .sub-card-text{ font-size:.95rem; color:var(--text-muted); margin-bottom:.8rem; }
 
-    /* HEADER */
-    .app-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
+    .form-control{ background:#020617; border-radius:999px; border:1px solid rgba(55,65,81,.9); color:#e5e7eb; padding:.7rem .9rem; }
+    .btn{ font-size:.95rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; border-radius:999px; padding:.75rem 1.1rem; position:relative; overflow:hidden; transition:all .12s; }
+    .btn-primary{ background:linear-gradient(135deg,#22c55e,#15803d); border-color:#16a34a; color:#ecfdf5; }
+    .btn-outline-primary{ background:transparent; border-color:#22c55e; color:#bbf7d0; }
+    .btn-warning{ background:linear-gradient(135deg,#fbbf24,#b45309); border-color:#d97706; color:#111827; }
+    .btn-outline-warning{ background:transparent; border-color:#fbbf24; color:#fef9c3; }
 
-    .app-title {
-      font-size: 2.1rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
+    .btn-running{ cursor:wait; box-shadow:0 0 24px rgba(56,189,248,.9); animation:btnPulse .9s ease-in-out infinite alternate; }
+    @keyframes btnPulse{ from{box-shadow:0 0 18px rgba(56,189,248,.4)} to{box-shadow:0 0 32px rgba(56,189,248,1)} }
 
-    .app-subtitle {
-      font-size: 1rem;
-      color: var(--text-muted);
-    }
+    /* processing overlay */
+    #processing-overlay{ position:fixed; inset:0; background:#000; display:none; align-items:center; justify-content:center; z-index:9999; overflow:hidden; }
+    #processing-video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:brightness(.55); }
+    #processing-box{ position:relative; background:rgba(15,23,42,.8); border-radius:18px; border:1px solid rgba(148,163,184,.6); padding:1.5rem; width:min(420px,94vw); box-shadow:0 26px 70px rgba(0,0,0,.9); text-align:left; }
+    .progress{ height:.8rem; border-radius:999px; background:#020617; border:1px solid rgba(55,65,81,.9); overflow:hidden; }
+    .progress-bar{ background:linear-gradient(90deg,#22c55e,#38bdf8); }
+    #processing-quote{ font-size:.9rem; color:#9ca3af; font-style:italic; margin-bottom:.9rem; min-height:1.3rem; }
 
-    .header-tag {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      padding: 0.35rem 1rem;
-      color: #cbd5f5;
-      background: rgba(15, 23, 42, 0.85);
-    }
-
-    /* MAIN LAYOUT */
-    .main-shell {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .nav-side {
-      flex: 0 0 230px;
-      max-width: 230px;
-    }
-
-    .pages-shell {
-      flex: 1 1 0;
-      min-width: 0;
-    }
-
-    @media (max-width: 900px) {
-      .main-shell {
-        flex-direction: column;
-      }
-      .nav-side {
-        max-width: 100%;
-        flex: 1 1 auto;
-      }
-    }
-
-    /* SIDE NAV (BOOK TABS) */
-    .step-nav {
-      background: rgba(15, 23, 42, 0.96);
-      border-radius: 18px;
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      padding: 1rem 0.9rem;
-      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.8);
-    }
-
-    .step-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.55rem 0.6rem;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background 0.15s ease-out, transform 0.1s ease-out,
-        box-shadow 0.1s ease-out;
-      margin-bottom: 0.25rem;
-    }
-
-    .step-item:hover {
-      background: rgba(15, 23, 42, 0.9);
-      transform: translateX(2px);
-    }
-
-    .step-item.active {
-      background: linear-gradient(
-        120deg,
-        rgba(34, 197, 94, 0.22),
-        rgba(56, 189, 248, 0.22)
-      );
-      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.6);
-      transform: translateX(3px);
-    }
-
-    .step-index {
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-    }
-
-    .step-label {
-      display: flex;
-      flex-direction: column;
-      gap: 0.1rem;
-    }
-
-    .step-label-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-
-    .step-label-sub {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    /* PAGE CARD */
-    .page-card {
-      background: rgba(15, 23, 42, 0.96);
-      border-radius: 22px;
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      padding: 1.6rem 1.6rem 1.8rem;
-      min-height: 460px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 26px 60px rgba(0, 0, 0, 0.85),
-        0 0 0 1px rgba(15, 23, 42, 0.9);
-    }
-
-    .page-card::before {
-      content: "";
-      position: absolute;
-      inset: -80%;
-      background: radial-gradient(
-          circle at top left,
-          rgba(56, 189, 248, 0.22),
-          transparent 55%
-        ),
-        radial-gradient(
-          circle at bottom right,
-          rgba(34, 197, 94, 0.2),
-          transparent 60%
-        );
-      opacity: 0.12;
-      pointer-events: none;
-    }
-
-    .page-inner {
-      position: relative;
-      z-index: 1;
-    }
-
-    .page-title {
-      font-size: 1.35rem;
-      font-weight: 700;
-      margin-bottom: 0.3rem;
-    }
-
-    .page-subtitle {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      margin-bottom: 1rem;
-    }
-
-    .page {
-      display: none;
-      animation: pageFlip 0.3s ease-out;
-    }
-
-    .page.active {
-      display: block;
-    }
-
-    @keyframes pageFlip {
-      0% {
-        opacity: 0;
-        transform: translateX(10px) rotateY(5deg);
-      }
-      100% {
-        opacity: 1;
-        transform: translateX(0) rotateY(0);
-      }
-    }
-
-    /* SUB CARDS */
-    .sub-card {
-      background-color: #020617;
-      border-radius: 16px;
-      border: 1px solid rgba(51, 65, 85, 0.95);
-      padding: 1rem 1.1rem 1.2rem;
-      margin-bottom: 0.9rem;
-    }
-
-    .sub-card-title {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.35rem;
-    }
-
-    .sub-card-text {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      margin-bottom: 0.8rem;
-    }
-
-    /* FORMS */
-    .form-control {
-      background-color: #020617;
-      border-radius: 999px;
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      color: #e5e7eb;
-      font-size: 0.95rem;
-      padding: 0.7rem 0.9rem;
-    }
-
-    .form-control:focus {
-      border-color: var(--accent-green);
-      background-color: #020617;
-      color: #f9fafb;
-      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.65);
-    }
-
-    /* BUTTONS */
-    .btn {
-      font-size: 0.95rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border-radius: 999px;
-      padding: 0.75rem 1.1rem;
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out,
-        background-color 0.12s ease-out, border-color 0.12s ease-out;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.65);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #22c55e, #15803d);
-      border-color: #16a34a;
-      color: #ecfdf5;
-    }
-
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #4ade80, #16a34a);
-    }
-
-    .btn-outline-primary {
-      background: transparent;
-      border-color: #22c55e;
-      color: #bbf7d0;
-    }
-
-    .btn-outline-primary:hover {
-      background: rgba(22, 163, 74, 0.2);
-    }
-
-    .btn-warning {
-      background: linear-gradient(135deg, #fbbf24, #b45309);
-      border-color: #d97706;
-      color: #111827;
-    }
-
-    .btn-warning:hover {
-      background: linear-gradient(135deg, #facc15, #d97706);
-      color: #020617;
-    }
-
-    .btn-outline-warning {
-      background: transparent;
-      border-color: #fbbf24;
-      color: #fef9c3;
-    }
-
-    .btn-outline-warning:hover {
-      background: rgba(248, 250, 252, 0.06);
-    }
-
-    /* RUNNING STATE */
-    .btn-running {
-      cursor: wait;
-      transform: translateY(0);
-      box-shadow: 0 0 24px rgba(56, 189, 248, 0.9);
-      animation: btnPulse 0.9s ease-in-out infinite alternate;
-    }
-
-    .btn-running::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        120deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.26) 45%,
-        transparent 80%
-      );
-      transform: translateX(-150%);
-      animation: btnShine 1.25s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes btnPulse {
-      from {
-        box-shadow: 0 0 18px rgba(56, 189, 248, 0.4);
-      }
-      to {
-        box-shadow: 0 0 32px rgba(56, 189, 248, 1);
-      }
-    }
-
-    @keyframes btnShine {
-      0% {
-        transform: translateX(-160%);
-      }
-      100% {
-        transform: translateX(160%);
-      }
-    }
-
-    /* ALERTS */
-    .alert {
-      font-size: 0.9rem;
-      border-radius: 12px;
-      border-width: 1px;
-      padding: 0.6rem 0.9rem;
-    }
-
-    .alert-success {
-      border-color: rgba(34, 197, 94, 0.8);
-      background: rgba(5, 46, 22, 0.9);
-      color: #bbf7d0;
-    }
-
-    .alert-danger {
-      border-color: rgba(248, 113, 113, 0.85);
-      background: rgba(69, 10, 10, 0.95);
-      color: #fecaca;
-    }
-
-    /* LOG CONSOLE */
-    pre {
-      background-color: #020617;
-      border-radius: 12px;
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      padding: 0.9rem 1rem;
-      font-size: 0.85rem;
-      color: #e5e7eb;
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
-        Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-
-    /* PROCESSING OVERLAY */
-    #processing-overlay {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      overflow: hidden;
-    }
-
-    #processing-video {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: brightness(0.55);
-    }
-
-    #processing-box {
-      position: relative;
-      background: rgba(15, 23, 42, 0.8);
-      border-radius: 18px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      padding: 1.5rem 1.6rem 1.4rem;
-      width: min(420px, 94vw);
-      box-shadow: 0 26px 70px rgba(0, 0, 0, 0.9);
-      text-align: left;
-    }
-
-    #processing-title {
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: #9ca3af;
-      margin-bottom: 0.4rem;
-    }
-
-    #processing-text {
-      font-size: 0.95rem;
-      color: #e5e7eb;
-      margin-bottom: 0.4rem;
-    }
-
-    #processing-quote {
-      font-size: 0.9rem;
-      color: #9ca3af;
-      font-style: italic;
-      margin-bottom: 0.9rem;
-      min-height: 1.3rem;
-    }
-
-    #processing-percent-label {
-      font-size: 0.85rem;
-      color: #9ca3af;
-      margin-top: 0.35rem;
-      text-align: right;
-    }
+    /* logs iframe */
+    .logs-iframe { width:100%; height:64vh; border:1px solid rgba(148,163,184,.12); border-radius:8px; background:#010212; }
+    .quick-links .btn{ width:100%; text-align:center; }
+    pre.log-preview { background:#020617; color:#e5e7eb; padding:12px; border-radius:8px; max-height:50vh; overflow:auto; white-space:pre-wrap; }
   </style>
 </head>
-
 <body>
-  <!-- Landing Intro Video (2s) -->
+  <!-- Landing intro video -->
+   <!--By MHkhan-->
   <div id="landing-overlay">
     <video id="landing-video" autoplay muted playsinline>
       <source src="{{ url_for('static', filename='landing.mp4') }}" type="video/mp4" />
     </video>
   </div>
 
-  <!-- Portal Background Video -->
+  <!-- Portal background video -->
+   <!--By MHKHAN-->>
   <video id="portal-bg-video" autoplay loop muted playsinline>
     <source src="{{ url_for('static', filename='loading1.mp4') }}" type="video/mp4" />
+
   </video>
 
-  <!-- Processing Overlay -->
+  <!-- Processing overlay -->
   <div id="processing-overlay">
     <video id="processing-video" autoplay loop muted playsinline>
       <source src="{{ url_for('static', filename='loading.mp4') }}" type="video/mp4" />
     </video>
-
     <div id="processing-box">
       <div id="processing-title">Processing</div>
-      <div id="processing-text">
-        Your automation is running. Don’t close or refresh this tab.
-      </div>
+      <div id="processing-text">Your automation is running. Do not close or refresh this tab.</div>
       <div id="processing-quote"></div>
-      <div class="progress">
-        <div
-          id="processing-progress-bar"
-          class="progress-bar"
-          role="progressbar"
-          style="width: 0%;"
-          aria-valuenow="0"
-          aria-valuemin="0"
-          aria-valuemax="100"
-        ></div>
+      <div class="progress" style="margin-bottom:.6rem;">
+        <div id="processing-progress-bar" class="progress-bar" style="width:0%;"></div>
       </div>
-      <div id="processing-percent-label">0%</div>
+      <div id="processing-percent-label" style="text-align:right;color:var(--text-muted);">0%</div>
     </div>
   </div>
 
@@ -559,55 +121,88 @@
       <header class="app-header">
         <div>
           <div class="app-title">Security Automation Portal</div>
-          <div class="app-subtitle">
-            Upload once, run automated vulnerability and misconfiguration pipelines.
-          </div>
+          <div class="app-subtitle">Upload, run, and inspect automated Vulnerability, Misconfiguration & Image Assessment Report</div>
         </div>
-        <span class="header-tag">LOCAL · AUTO-REPORT ENGINE</span>
+        <span class="header-tag" >🟢Live· AUTO-REPORT</span>
       </header>
 
+      <!-- flash messages -->
+       <!--MHKHAN-->>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="mb-3">
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }}" role="alert" style="white-space: pre-line;">
-                {{ message }}
-              </div>
+              <div class="alert alert{{ category }}" role="alert" style="white-space:pre-line;">{{ message }}</div>
             {% endfor %}
           </div>
         {% endif %}
       {% endwith %}
 
       <div class="main-shell">
-        <!-- Side Nav -->
+        <!-- Sidebar -->
         <nav class="nav-side">
           <div class="step-nav">
             <div class="step-item active" data-page-target="page-upload">
               <div class="step-index">1</div>
               <div class="step-label">
                 <div class="step-label-title">Upload</div>
-                <div class="step-label-sub">Base Excel report</div>
+                <div class="step-label-sub">📄Base Excel report</div>
               </div>
             </div>
+
             <div class="step-item" data-page-target="page-vuln">
               <div class="step-index">2</div>
               <div class="step-label">
-                <div class="step-label-title">Vulnerability</div>
-                <div class="step-label-sub">DevOps & master</div>
+                <div class="step-label-title">🛡️Vulnerability</div>
+                <div class="step-label-sub">⚙️DevOps & Master</div>
               </div>
             </div>
+
             <div class="step-item" data-page-target="page-misconfig">
               <div class="step-index">3</div>
               <div class="step-label">
-                <div class="step-label-title">Misconfiguration</div>
-                <div class="step-label-sub">4-stage pipeline</div>
+                <div class="step-label-title">⚠️Misconfiguration</div>
+                <div class="step-label-sub">🧩4-stage pipeline</div>
               </div>
             </div>
+
+            <div class="step-item" data-page-target="page-image_assessment">
+              <div class="step-index">3</div>
+              <div class="step-label">
+                <div class="step-label-title">🐳Image Assessment</div>
+                <div class="step-label-sub">Segrigated & Master_report </div>
+              </div>
+            </div>
+
             <div class="step-item" data-page-target="page-insights">
               <div class="step-index">4</div>
               <div class="step-label">
-                <div class="step-label-title">Insights</div>
-                <div class="step-label-sub">Charts & logs</div>
+                <div class="step-label-title">📊Insights</div>
+                <div class="step-label-sub">Charts & Logs</div>
+              </div>
+            </div>
+
+            <!-- NEW: Logs nav item -->
+            <div class="step-item" data-page-target="page-logs" id="nav-logs-item">
+              <div class="step-index">5</div>
+              <div class="step-label">
+                <div class="step-label-title">🗂️Logs</div>
+                <div class="step-label-sub">❌Error & ✔️Processed</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Logs Card -->
+          <div style="margin-top:12px;">
+            <div class="sub-card" style="padding:10px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <strong style="font-size:.95rem;">Logs</strong>
+                <small style="color:var(--text-muted);">quick</small>
+              </div>
+              <div class="quick-links" style="display:flex; flex-direction:column; gap:8px;">
+                <button class="btn btn-outline-danger" id="quick-error-btn">Error Logs</button>
+                <button class="btn btn-outline-success" id="quick-processed-btn">Processed Logs</button>
+                <a class="btn btn-secondary" href="{{ url_for('logs_index') }}" style="text-decoration:none;">Full Logs Page</a>
               </div>
             </div>
           </div>
@@ -620,37 +215,21 @@
               <!-- PAGE: Upload -->
               <div class="page active" id="page-upload">
                 <div class="page-title">Upload base report</div>
-                <div class="page-subtitle">
-                  Upload the latest vulnerability or misconfiguration export (.xlsx/.xls/.csv).
-                </div>
+                <div class="page-subtitle">Upload the latest vulnerability or misconfiguration export (.xlsx/.xls/.csv).</div>
 
                 <div class="sub-card">
                   <div class="sub-card-title">Report file</div>
-                  <div class="sub-card-text">
-                    This file will be reused by both Vulnerability and Misconfiguration pipelines.
-                  </div>
+                  <div class="sub-card-text">This file will be reused by both Vulnerability and Misconfiguration pipelines.</div>
 
-                  <form
-                    method="post"
-                    action="{{ url_for('upload') }}"
-                    enctype="multipart/form-data"
-                    class="d-flex flex-column flex-md-row gap-2"
-                  >
+                  <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="d-flex flex-column flex-md-row gap-2">
                     <input type="file" name="report_file" class="form-control" required />
-                    <button type="submit" class="btn btn-primary">
-                      Upload report
-                    </button>
+                    <button type="submit" class="btn btn-primary">Upload report</button>
                   </form>
 
                   {% if report_path %}
-                    <div class="mt-3" style="font-size: 0.95rem; color: var(--text-muted);">
-                      <strong>Active file:</strong>
-                      {{ report_path.split('/')[-1].split('\\\\')[-1] }}
-                    </div>
+                    <div class="mt-3" style="font-size:.95rem; color:var(--text-muted);"><strong>Active file:</strong> {{ report_path.split('/')[-1].split('\\\\')[-1] }}</div>
                   {% else %}
-                    <div class="mt-3" style="font-size: 0.95rem; color: var(--text-muted);">
-                      No file uploaded yet.
-                    </div>
+                    <div class="mt-3" style="font-size:.95rem; color:var(--text-muted);">No file uploaded yet.</div>
                   {% endif %}
                 </div>
               </div>
@@ -658,46 +237,32 @@
               <!-- PAGE: Vulnerability -->
               <div class="page" id="page-vuln">
                 <div class="page-title">Vulnerability workflows</div>
-                <div class="page-subtitle">
-                  Run DevOps segregation and generate the master vulnerability report.
-                </div>
+                <div class="page-subtitle">Run DevOps segregation and generate the master vulnerability report.</div>
 
                 {% if report_path %}
                   <div class="sub-card">
                     <div class="sub-card-title">DevOps segregation</div>
-                    <div class="sub-card-text">
-                      Split vulnerabilities by application into separate sheets in a styled workbook.
-                    </div>
+                    <div class="sub-card-text">Split vulnerabilities by application into separate sheets in a styled workbook.</div>
                     <form method="post" action="{{ url_for('run_vuln_devops') }}" class="with-progress">
-                      <button type="submit" class="btn btn-primary w-100">
-                        Run DevOps segregation
-                      </button>
+                      <button type="submit" class="btn btn-primary w-100">Run DevOps segregation</button>
                     </form>
                   </div>
 
                   <div class="sub-card">
                     <div class="sub-card-title">Master vulnerability report</div>
-                    <div class="sub-card-text">
-                      Generate application-wise counts for Critical / High / Medium / Low and Actively Exploited.
-                    </div>
+                    <div class="sub-card-text">Generate application-wise counts for Critical/High/Medium/Low and Actively Exploited.</div>
                     <form method="post" action="{{ url_for('run_vuln_master') }}" class="with-progress">
-                      <button type="submit" class="btn btn-outline-primary w-100">
-                        Run master vulnerability report
-                      </button>
+                      <button type="submit" class="btn btn-outline-primary w-100">Run master vulnerability report</button>
                     </form>
 
                     {% if vuln_master_exists %}
-                      <div class="mt-2" style="font-size: 0.9rem; color: var(--text-muted);">
-                        Master report ready. Check Insights page for charts.
-                      </div>
+                      <div class="mt-2" style="font-size:.9rem; color:var(--text-muted);">Master report ready. Check Insights page for charts.</div>
                     {% endif %}
                   </div>
                 {% else %}
                   <div class="sub-card">
                     <div class="sub-card-title">No report loaded</div>
-                    <div class="sub-card-text">
-                      Upload a base report on the Upload page to unlock Vulnerability workflows.
-                    </div>
+                    <div class="sub-card-text">Upload a base report on the Upload page to unlock Vulnerability workflows.</div>
                   </div>
                 {% endif %}
               </div>
@@ -705,91 +270,130 @@
               <!-- PAGE: Misconfiguration -->
               <div class="page" id="page-misconfig">
                 <div class="page-title">Misconfiguration workflows</div>
-                <div class="page-subtitle">
-                  DevOps segregation → AHA/PMP/AZURE/PP split → rules engine → master misconfig summary.
-                </div>
+                <div class="page-subtitle">DevOps segregation → AHA/PMP/AZURE/PP split → rules engine → master misconfig summary.</div>
 
                 {% if report_path %}
                   <div class="sub-card">
                     <div class="sub-card-title">Stage 1 · DevOps segregation</div>
-                    <div class="sub-card-text">
-                      Normalize and map misconfigurations to canonical applications with per-app sheets.
-                    </div>
+                    <div class="sub-card-text">Normalize and map misconfigurations to canonical applications with per-app sheets.</div>
                     <form method="post" action="{{ url_for('run_misconfig_devops') }}" class="with-progress">
-                      <button type="submit" class="btn btn-warning w-100">
-                        Misconfig DevOps segregation
-                      </button>
+                      <button type="submit" class="btn btn-warning w-100">Misconfig DevOps segregation</button>
                     </form>
                   </div>
 
                   <div class="sub-card">
                     <div class="sub-card-title">Stage 2 · AHA / PMP / AZURE / PP split</div>
-                    <div class="sub-card-text">
-                      Filter High/Critical and group into AHA, PMP, AZURE, and PP using canonical lists and fuzzy logic.
-                    </div>
+                    <div class="sub-card-text">Filter High/Critical and group into AHA, PMP, AZURE and PP using canonical lists and fuzzy logic.</div>
                     <form method="post" action="{{ url_for('run_misconfig_aha') }}" class="with-progress">
-                      <button type="submit" class="btn btn-outline-warning w-100">
-                        Run AHA / PMP / AZURE / PP split
-                      </button>
+                      <button type="submit" class="btn btn-outline-warning w-100">Run AHA / PMP / AZURE / PP split</button>
                     </form>
                   </div>
 
                   <div class="sub-card">
                     <div class="sub-card-title">Stage 3 · Apply rules (Final report)</div>
-                    <div class="sub-card-text">
-                      Classify rows as Actionable, Exception, POC, Region Disabled, etc. using your rules folder.
-                    </div>
+                    <div class="sub-card-text">Classify rows as Actionable, Exception, POC, Region Disabled, etc. using your rules folder.</div>
                     <form method="post" action="{{ url_for('run_misconfig_final') }}" class="with-progress">
-                      <button type="submit" class="btn btn-outline-warning w-100">
-                        Apply rules · Final misconfig report
-                      </button>
+                      <button type="submit" class="btn btn-outline-warning w-100">Apply rules · Final misconfig report</button>
                     </form>
                   </div>
 
                   <div class="sub-card">
                     <div class="sub-card-title">Stage 4 · Master misconfiguration report</div>
-                    <div class="sub-card-text">
-                      Aggregate per-application totals, Actionable counts and out-of-scope items.
-                    </div>
+                    <div class="sub-card-text">Aggregate per-application totals, Actionable counts and out-of-scope entries.</div>
                     <form method="post" action="{{ url_for('run_misconfig_master') }}" class="with-progress">
-                      <button type="submit" class="btn btn-outline-warning w-100">
-                        Build master misconfig report
-                      </button>
+                      <button type="submit" class="btn btn-outline-warning w-100">Build master misconfig report</button>
                     </form>
 
                     {% if mis_master_exists %}
-                      <div class="mt-2" style="font-size: 0.9rem; color: var(--text-muted);">
-                        Master misconfig report ready. Check Insights page for charts.
-                      </div>
+                      <div class="mt-2" style="font-size:.9rem; color:var(--text-muted);">Master misconfig report ready. Check Insights page for charts.</div>
                     {% endif %}
                   </div>
+                  <div class="sub-card">
+                    <div class="sub-card-title">Stage 5 · Apply Justification</div>
+                    <div class="sub-card-text">
+                      Add Risk & Compliance justification text to AHA & PMP rows
+                      without changing Actionable status.
+                    </div>
+                    
+                    <form method="post"
+                          action="{{ url_for('run_misconfig_justification') }}"
+                          class="with-progress">
+                      <button type="submit"
+                              class="btn btn-outline-warning w-100">
+                        Apply Justification (Final)
+                      </button>
+                    </form>
+                  </div>
+
                 {% else %}
                   <div class="sub-card">
                     <div class="sub-card-title">No report loaded</div>
-                    <div class="sub-card-text">
-                      Upload a base report on the Upload page to unlock Misconfiguration workflows.
-                    </div>
+                    <div class="sub-card-text">Upload a base report on the Upload page to unlock Misconfiguration workflows.</div>
                   </div>
                 {% endif %}
               </div>
+              
+              
+              <!-- PAGE: Image Assessment -->
+<div class="page" id="page-image_assessment">
+  <div class="page-title">Image Assessment workflows</div>
+  <div class="page-subtitle">
+    Run image assessment segregation and generate the master image assessment report.
+  </div>
+
+  {% if report_path %}
+    <div class="sub-card">
+      <div class="sub-card-title">Stage 1 · Image Assessment segregation</div>
+      <div class="sub-card-text">
+        Extract and segregate image vulnerabilities and findings from the base report.
+      </div>
+      <form method="post"
+            action="{{ url_for('run_image_assessment') }}"
+            class="with-progress">
+        <button type="submit" class="btn btn-primary w-100">
+          Run Image Assessment
+        </button>
+      </form>
+    </div>
+
+    <div class="sub-card">
+      <div class="sub-card-title">Stage 2 · Master Image Assessment report</div>
+      <div class="sub-card-text">
+        Generate application-wise image assessment summary.
+      </div>
+      <form method="post"
+            action="{{ url_for('run_image_assessment_master') }}"
+            class="with-progress">
+        <button type="submit" class="btn btn-outline-primary w-100">
+          Build Image Assessment Master Report
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <div class="sub-card">
+      <div class="sub-card-title">No report loaded</div>
+      <div class="sub-card-text">
+        Upload a base report on the Upload page to unlock Image Assessment workflows.
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+                      
 
               <!-- PAGE: Insights -->
               <div class="page" id="page-insights">
                 <div class="page-title">Insights & run logs</div>
-                <div class="page-subtitle">
-                  Visualize severity and misconfig distributions and review raw logs from the last run.
-                </div>
+                <div class="page-subtitle">Visualize severity and misconfig distributions and review raw logs from the last run.</div>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-6">
                     <div class="sub-card">
                       <div class="sub-card-title">Vulnerability severity overview</div>
                       {% if vuln_chart_data %}
-                        <canvas id="vulnChart" style="max-height: 260px;"></canvas>
+                        <canvas id="vulnChart" style="max-height:260px;"></canvas>
                       {% else %}
-                        <div class="sub-card-text">
-                          Run the Master Vulnerability report to populate this chart.
-                        </div>
+                        <div class="sub-card-text">Run the Master Vulnerability report to populate this chart.</div>
                       {% endif %}
                     </div>
                   </div>
@@ -798,27 +402,57 @@
                     <div class="sub-card">
                       <div class="sub-card-title">Misconfiguration status overview</div>
                       {% if mis_chart_data %}
-                        <canvas id="misChart" style="max-height: 260px;"></canvas>
+                        <canvas id="misChart" style="max-height:260px;"></canvas>
                       {% else %}
-                        <div class="sub-card-text">
-                          Run the Master Misconfiguration report to populate this chart.
-                        </div>
+                        <div class="sub-card-text">Run the Master Misconfiguration report to populate this chart.</div>
                       {% endif %}
                     </div>
                   </div>
                 </div>
 
                 <div class="sub-card">
-                  <div class="sub-card-title">Last run log</div>
+                  <div class="sub-card-title">Last run log (session)</div>
                   {% if last_output %}
-                    <pre style="max-height: 260px; overflow:auto;">{{ last_output }}</pre>
+                    <pre style="max-height:260px; overflow:auto;">{{ last_output }}</pre>
                   {% else %}
-                    <div class="sub-card-text">
-                      No workflow has been executed yet in this session.
-                    </div>
+                    <div class="sub-card-text">No workflow executed in this session yet.</div>
                   {% endif %}
                 </div>
               </div>
+
+              <!-- PAGE: Logs (inline iframe) -->
+              <div class="page" id="page-logs">
+                <div class="page-title">🗂️Logs</div>
+                <div class="page-subtitle">View Error and Processed logs inline, refresh or download files.</div>
+
+                <div class="sub-card" style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+                  <div style="flex:1;">
+                    <div class="sub-card-title">Quick actions</div>
+                    <div class="sub-card-text">Use the buttons to load logs into the viewer below. You can also download or open the full logs page.</div>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                      <button id="logs-load-error" class="btn btn-outline-danger">Load Error Logs</button>
+                      <button id="logs-load-processed" class="btn btn-outline-success">Load Processed Logs</button>
+                      <a id="logs-download-error" class="btn btn-secondary" href="{{ url_for('logs_download', which='error') }}">Download Error</a>
+                      <a id="logs-download-processed" class="btn btn-secondary" href="{{ url_for('logs_download', which='processed') }}">Download Processed</a>
+                    </div>
+                  </div>
+                  <div style="width:260px;">
+                    <div class="meta" style="font-size:.9rem;">Open full logs page</div>
+                    <a class="btn btn-primary w-100" href="{{ url_for('logs_index') }}" target="_blank">Open /logs (separate)</a>
+                  </div>
+                </div>
+
+                <div class="sub-card">
+                  <iframe id="logs-viewer" class="logs-iframe" src="{{ url_for('logs_index') }}"></iframe>
+                </div>
+
+                <div class="sub-card" style="margin-top:.8rem;">
+                  <div class="sub-card-title">Preview (tail)</div>
+                  <div class="sub-card-text">Last portion of the selected log (for quick reading).</div>
+                  <pre id="logs-tail" class="log-preview">(use Load buttons to fetch tail)</pre>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
@@ -827,18 +461,36 @@
   </div>
 
   <script>
-    // Landing intro: show for 2 seconds, then fade and remove
+    /* landing fade */
     window.addEventListener("load", () => {
       const overlay = document.getElementById("landing-overlay");
       setTimeout(() => {
         overlay.classList.add("landing-fade");
-        setTimeout(() => {
-          overlay.style.display = "none";
-        }, 1000); // after fade
-      }, 2000); // show for 2s
+        setTimeout(() => overlay.style.display = "none", 1000);
+      }, 2000);
     });
 
-    // Quotes during processing overlay
+    // Page navigation (book-like)
+    const stepItems = document.querySelectorAll(".step-item");
+    const pages = document.querySelectorAll(".page");
+    stepItems.forEach(item => {
+      item.addEventListener("click", () => {
+        const target = item.getAttribute("data-page-target");
+        stepItems.forEach(s => s.classList.remove("active"));
+        item.classList.add("active");
+        pages.forEach(p => {
+          if (p.id === target) p.classList.add("active"); else p.classList.remove("active");
+        });
+        // if logs page shown, ensure iframe focused
+        if (target === "page-logs") {
+          const iframe = document.getElementById("logs-viewer");
+          // reload iframe to ensure up-to-date content
+          iframe.src = iframe.src;
+        }
+      });
+    });
+
+    // processing overlay logic (same as before)
     const processingQuotes = [
       "Compiling chaos into clean Excel sheets...",
       "Making DevOps think you did this manually.",
@@ -849,147 +501,80 @@
       "Security reports loading… productivity unlocked.",
       "From dump file to board-ready report in one click."
     ];
-
-    const overlayProcessing = document.getElementById("processing-overlay");
+    const overlay = document.getElementById("processing-overlay");
     const bar = document.getElementById("processing-progress-bar");
     const label = document.getElementById("processing-percent-label");
     const quoteEl = document.getElementById("processing-quote");
-
-    let progressInterval = null;
-    let quoteInterval = null;
-
-    function pickRandomQuote() {
-      const idx = Math.floor(Math.random() * processingQuotes.length);
-      return processingQuotes[idx];
+    let progressInterval = null, quoteInterval = null;
+    function pickRandomQuote(){ return processingQuotes[Math.floor(Math.random()*processingQuotes.length)]; }
+    function startProgress(clickedButton){
+      overlay.style.display = "flex";
+      if (clickedButton){ clickedButton.classList.add("btn-running"); clickedButton.dataset.originalText = clickedButton.innerText; clickedButton.innerText="Running..."; clickedButton.disabled = true; }
+      let percent = 5; bar.style.width = percent + "%"; label.textContent = percent + "%"; quoteEl.textContent = pickRandomQuote();
+      progressInterval = setInterval(()=>{ if (percent < 90){ percent += Math.random()*7; if (percent > 90) percent = 90; bar.style.width = percent.toFixed(0) + "%"; label.textContent = percent.toFixed(0) + "%"; } }, 350);
+      quoteInterval = setInterval(()=>{ quoteEl.textContent = pickRandomQuote(); }, 4000);
     }
-
-    function startProgress(clickedButton) {
-      overlayProcessing.style.display = "flex";
-
-      if (clickedButton) {
-        clickedButton.classList.add("btn-running");
-        clickedButton.dataset.originalText = clickedButton.innerText;
-        clickedButton.innerText = "Running...";
-        clickedButton.disabled = true;
-      }
-
-      let percent = 5;
-      bar.style.width = percent + "%";
-      label.textContent = percent + "%";
-      quoteEl.textContent = pickRandomQuote();
-
-      progressInterval = setInterval(() => {
-        if (overlayProcessing.style.display === "none") {
-          clearInterval(progressInterval);
-          clearInterval(quoteInterval);
-          return;
-        }
-        if (percent < 90) {
-          percent += Math.random() * 7;
-          if (percent > 90) percent = 90;
-          bar.style.width = percent.toFixed(0) + "%";
-          label.textContent = percent.toFixed(0) + "%";
-        }
-      }, 350);
-
-      quoteInterval = setInterval(() => {
-        if (overlayProcessing.style.display === "none") {
-          clearInterval(quoteInterval);
-          return;
-        }
-        quoteEl.textContent = pickRandomQuote();
-      }, 4000);
-    }
-
-    // Attach to forms that should trigger processing overlay
-    document.querySelectorAll("form.with-progress").forEach((form) => {
-      form.addEventListener("submit", () => {
-        const btn = form.querySelector("button[type='submit']");
-        startProgress(btn);
-      });
+    document.querySelectorAll("form.with-progress").forEach(form => {
+      form.addEventListener("submit", function(){ const btn = form.querySelector("button[type='submit']"); startProgress(btn); });
     });
 
-    // Page navigation (book-like)
-    const stepItems = document.querySelectorAll(".step-item");
-    const pages = document.querySelectorAll(".page");
+    // Quick Logs buttons - load into iframe and tail preview via fetch endpoints
+    const logsViewer = document.getElementById("logs-viewer");
+    const tailEl = document.getElementById("logs-tail");
+    const loadErrorBtn = document.getElementById("logs-load-error");
+    const loadProcBtn = document.getElementById("logs-load-processed");
 
-    stepItems.forEach((item) => {
-      item.addEventListener("click", () => {
-        const targetId = item.getAttribute("data-page-target");
-        stepItems.forEach((s) => s.classList.remove("active"));
-        item.classList.add("active");
-        pages.forEach((p) => {
-          if (p.id === targetId) {
-            p.classList.add("active");
-          } else {
-            p.classList.remove("active");
-          }
-        });
-      });
-    });
-
-    // Chart.js data from backend (Jinja)
-    const vulnChartData =
-      {{ vuln_chart_data | tojson | safe if vuln_chart_data else 'null' }};
-    const misChartData =
-      {{ mis_chart_data | tojson | safe if mis_chart_data else 'null' }};
-
-    function initCharts() {
-      if (vulnChartData) {
-        const ctx = document.getElementById("vulnChart").getContext("2d");
-        new Chart(ctx, {
-          type: "doughnut",
-          data: {
-            labels: vulnChartData.labels,
-            datasets: [
-              {
-                data: vulnChartData.values,
-                borderWidth: 1
-              }
-            ]
-          },
-          options: {
-            plugins: {
-              legend: {
-                labels: { color: "#e5e7eb", font: { size: 12 } }
-              }
-            }
-          }
-        });
-      }
-
-      if (misChartData) {
-        const ctx2 = document.getElementById("misChart").getContext("2d");
-        new Chart(ctx2, {
-          type: "bar",
-          data: {
-            labels: misChartData.labels,
-            datasets: [
-              {
-                data: misChartData.values,
-                borderWidth: 1
-              }
-            ]
-          },
-          options: {
-            scales: {
-              x: {
-                ticks: { color: "#e5e7eb" },
-                grid: { color: "rgba(148,163,184,0.2)" }
-              },
-              y: {
-                ticks: { color: "#e5e7eb" },
-                grid: { color: "rgba(148,163,184,0.2)" }
-              }
-            },
-            plugins: {
-              legend: { display: false }
-            }
-          }
-        });
+    // helper to fetch tail text endpoint (we reuse /logs/error and /logs/processed pages and extract pre content)
+    async function fetchTail(which){
+      try {
+        // fetch the page HTML
+        const resp = await fetch(`/logs/${which}`);
+        if (!resp.ok) { tailEl.textContent = '(failed to fetch)'; return; }
+        const html = await resp.text();
+        // try to extract the <pre> contents from returned HTML (logs.html returns a <pre> for tail)
+        const preMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+        const text = preMatch ? preMatch[1].replace(/<\/?[^>]+(>|$)/g, "") : "(no preview found)";
+        tailEl.textContent = text;
+      } catch (e) {
+        tailEl.textContent = "(error fetching tail)";
       }
     }
 
+    loadErrorBtn.addEventListener("click", () => {
+      logsViewer.src = "/logs/error";
+      fetchTail("error");
+      // switch to logs page
+      document.querySelectorAll(".step-item").forEach(s => s.classList.remove("active"));
+      document.querySelector('[data-page-target="page-logs"]').classList.add("active");
+      pages.forEach(p => p.id === "page-logs" ? p.classList.add("active") : p.classList.remove("active"));
+    });
+
+    loadProcBtn.addEventListener("click", () => {
+      logsViewer.src = "/logs/processed";
+      fetchTail("processed");
+      // switch to logs page
+      document.querySelectorAll(".step-item").forEach(s => s.classList.remove("active"));
+      document.querySelector('[data-page-target="page-logs"]').classList.add("active");
+      pages.forEach(p => p.id === "page-logs" ? p.classList.add("active") : p.classList.remove("active"));
+    });
+
+    // sidebar quick buttons also wired
+    document.getElementById("quick-error-btn").addEventListener("click", () => loadErrorBtn.click());
+    document.getElementById("quick-processed-btn").addEventListener("click", () => loadProcBtn.click());
+
+    // Charts init (if data available)
+    const vulnChartData = {{ vuln_chart_data | tojson | safe if vuln_chart_data else 'null' }};
+    const misChartData = {{ mis_chart_data | tojson | safe if mis_chart_data else 'null' }};
+    function initCharts(){
+      if (vulnChartData){
+        const ctx = document.getElementById("vulnChart")?.getContext("2d");
+        if (ctx) new Chart(ctx, { type:"doughnut", data:{ labels:vulnChartData.labels, datasets:[{ data:vulnChartData.values, borderWidth:1 }]}, options:{ plugins:{ legend:{ labels:{ color:"#e5e7eb", font:{ size:12 } } } } } });
+      }
+      if (misChartData){
+        const ctx2 = document.getElementById("misChart")?.getContext("2d");
+        if (ctx2) new Chart(ctx2, { type:"bar", data:{ labels:misChartData.labels, datasets:[{ data:misChartData.values, borderWidth:1 }] }, options:{ scales:{ x:{ ticks:{ color:"#e5e7eb" }, grid:{ color:"rgba(148,163,184,0.2)" } }, y:{ ticks:{ color:"#e5e7eb" }, grid:{ color:"rgba(148,163,184,0.2)" } } }, plugins:{ legend:{ display:false } } } });
+      }
+    }
     document.addEventListener("DOMContentLoaded", initCharts);
   </script>
 </body>
